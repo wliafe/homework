@@ -1,0 +1,22 @@
+import torch
+from torch import nn
+from torch.nn import functional as F
+
+class RNNModel(nn.Module):
+    def __init__(self, rnn_layer, vocab_size, step_size, output_size=None, one_hot=True, **kwargs):
+        super(RNNModel, self).__init__(**kwargs)
+        self.rnn = rnn_layer
+        self.vocab_size = vocab_size
+        self.step_size = step_size
+        self.output_size = output_size if output_size else vocab_size
+        self.one_hot=one_hot
+        self.num_hiddens = self.rnn.hidden_size
+        self.num_directions = 1 if not self.rnn.bidirectional else 2 # 如果RNN是双向的，num_directions应该是2，否则应该是1
+        self.linear = nn.Linear(self.step_size * self.num_hiddens * self.num_directions, self.output_size) # 定义输出层
+
+    def forward(self, inputs):
+        X = F.one_hot(inputs.long(), self.vocab_size) if self.one_hot else inputs # 将输入独热编码，X形状为(批量大小, 时间步数, 词表大小)
+        X = X.to(torch.float32)
+        Y, state = self.rnn(X) # Y形状为(批量大小, 时间步数, 隐藏大小),state形状为(隐藏层数*num_directions, 批量大小, 隐藏大小)
+        output = self.linear(Y.reshape((Y.shape[0], -1))) # 它的输出形状是(批量大小, 输出大小)。
+        return output, state
