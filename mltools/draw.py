@@ -1,26 +1,39 @@
+from IPython import display
 from matplotlib import pyplot as plt
 
-def plot(x=None,y=None,xlabel=None,ylabel=None,fmts=('-', 'm--', 'g-.', 'r:')):
-    '''画折线图'''
-    if not y:
-        y=[[]]
-    elif not isinstance(y[0], list):
-        y=[y]
-    if not x:
-        x=list(range(1,len(y[0])+1))
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    for index,y in enumerate(y):
-        plt.plot(x,y,fmts[index])
-    plt.grid()
-    plt.show()
+class Animator:
+    """在动画中绘制数据"""
+    def __init__(self, *, line_num, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None, fmts=('-', 'm--', 'g-.', 'r:')):
+        # 增量地绘制多条线
+        self.fig, self.axes = plt.subplots()
+        self.xlabel,self.ylabel,self.xlim,self.ylim,self.legend=xlabel,ylabel,xlim,ylim,legend
+        self.X,self.Y=[[] for _ in range(line_num)],[[] for _ in range(line_num)]
+        self.fmts=fmts
+        
+    def add(self, *y):
+        for index,item in enumerate(y):
+            self.Y[index].append(item)
+            self.X[index].append(len(self.Y[index]))
+        self.axes.cla()
+        for index,(x,y) in enumerate(zip(self.X,self.Y)):
+            self.axes.plot(x,y,self.fmts[index])
+        self.set_axes()
+        display.display(self.fig)
+        display.clear_output(wait=True)
+
+    def set_axes(self):
+        self.axes.set_xlabel(self.xlabel)
+        self.axes.set_ylabel(self.ylabel)
+        self.axes.set_xlim(self.xlim)
+        self.axes.set_ylim(self.ylim)
+        if self.legend:self.axes.legend(self.legend)
+        self.axes.grid()
 
 def images(images,labels,shape):
     '''展示图片'''
     images=images.to(device='cpu')
-    for index,(img,label) in enumerate(zip(images,labels)):
-        plt.subplot(*shape,index+1)
-        plt.title(label)
-        plt.axis('off')
-        plt.imshow(img[0],cmap='gray')
-    plt.show()
+    fig,axes=plt.subplots(*shape)
+    for index,(ax,img,label) in enumerate(zip(ax,images,labels)):
+        ax.title(label)
+        ax.axis('off')
+        ax.imshow(img[0],cmap='gray')
