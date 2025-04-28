@@ -31,9 +31,10 @@ class Animator:
 
 def images(images,labels,shape):
     '''展示图片'''
-    images=images.to(device='cpu')
+    images=images.squeeze(1).to(device='cpu')
     fig,axes=plt.subplots(*shape)
-    for index,(ax,img,label) in enumerate(zip(ax,images,labels)):
-        ax.title(label)
-        ax.axis('off')
-        ax.imshow(img[0],cmap='gray')
+    axes = [element for sublist in axes for element in sublist]
+    for index,(ax,img,label) in enumerate(zip(axes,images,labels)):
+        ax.set_title(label)
+        ax.set_axis_off()
+        ax.imshow(img ,cmap='gray')
