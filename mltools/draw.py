@@ -8,6 +8,7 @@ class Animator:
         self.set_axes= lambda : self.axes.set(xlabel=xlabel,ylabel=ylabel,xlim=xlim,ylim=ylim) # 初始化设置axes函数
         self.legend=legend # 初始化标签
         self.X,self.Y=[[] for _ in range(line_num)],[[] for _ in range(line_num)] # 初始化数据容器
+        
     def add(self, *y):
         '''添加数据'''
         for index,item in enumerate(y):
