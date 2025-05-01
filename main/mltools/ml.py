@@ -8,8 +8,9 @@ class MachineLearning:
     def __init__(self, model, train_iter, val_iter=None, test_iter=None, *, device=torch.device('cpu')):
         '''初始化函数'''
         model.to(device) # 将网络复制到device上
-        self.model, self.train_iter, self.val_iter, self.device = model, train_iter, val_iter, device
-        self.test_iter = test_iter if test_iter else val_iter # 定义测试集
+        self.model, self.train_iter, self.device = model, train_iter, device
+        self.val_iter = val_iter if val_iter else self.train_iter # 定义验证集
+        self.test_iter = test_iter if test_iter else self.val_iter # 定义测试集
 
     def train(self,num_epochs,learning_rate):
         '''训练模型'''
