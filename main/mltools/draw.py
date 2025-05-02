@@ -32,7 +32,7 @@ def images(images, labels, shape):
     images = images.squeeze(1).to(device='cpu')
     fig, axes = plt.subplots(*shape)
     axes = [element for sublist in axes for element in sublist]
-    for index, (ax, img, label) in enumerate(zip(axes, images, labels)):
+    for ax, img, label in zip(axes, images, labels):
         ax.set_title(label)
         ax.set_axis_off()
         ax.imshow(img, cmap='gray')
