@@ -1,8 +1,10 @@
 import time
 import numpy as np
 
+
 class Timer:
     """记录多次运行时间"""
+
     def __init__(self):
         self.times = []
         self.start()
