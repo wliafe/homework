@@ -51,6 +51,7 @@ class MachineLearning:
     def calculate_train_iter(self):
         '''计算训练集'''
         metric = Accumulator(2)  # 累加器：(train_loss, train_size)
+        self.model.train()  # 训练模式
         for x, y in self.train_iter:
             x = self.transform_x(x)  # 转换x
             y_train = self.calculate_model(x)  # 计算模型
@@ -63,6 +64,7 @@ class MachineLearning:
     def calculate_val_iter(self):
         '''计算验证集'''
         metric = Accumulator(3)  # 累加器：(val_loss, val_acc, val_size)
+        self.model.eval()  # 验证模式
         with torch.no_grad():
             for x, y in self.val_iter:
                 x = self.transform_x(x)  # 转换x
@@ -109,7 +111,7 @@ class MachineLearning:
     def test(self):
         '''测试模型'''
         metric = Accumulator(2)  # 累加器：(test_acc, test_size)
-        # 测试
+        self.model.eval()  # 验证模式
         with torch.no_grad():
             for x, y in self.test_iter:
                 x = self.transform_x(x)  # 转换x
