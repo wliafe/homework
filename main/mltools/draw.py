@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 class Animator:
     """在动画中绘制数据"""
 
-    def __init__(self, *, line_num: int, xlabel: str = None, ylabel: str = None, xlim: tuple | int = None, ylim: tuple | int = None, legend: list[str] = None):
+    def __init__(self, *, line_num: int, xlabel: str = None, ylabel: str = None, xlim: tuple[int, int] | int = None, ylim: tuple[int, int] | int = None, legend: list[str] = None):
         self.fig, self.axes = plt.subplots()  # 生成画布
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
         self.legend = legend  # 初始化标签
