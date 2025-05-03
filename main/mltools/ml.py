@@ -1,19 +1,20 @@
 import torch
 from torch import nn, optim
+from torch.utils import data
 from .draw import Animator
 from .timer import Timer
 from .accumulator import Accumulator
 
 
 class MachineLearning:
-    def __init__(self, model, train_iter, val_iter=None, test_iter=None, *, device=torch.device('cpu')):
+    def __init__(self, model: nn.Module, train_iter: data.DataLoader, val_iter: data.DataLoader = None, test_iter: data.DataLoader = None, *, device=torch.device('cpu')):
         '''初始化函数'''
         model.to(device)  # 将网络复制到device上
         self.model, self.train_iter, self.device = model, train_iter, device
         self.val_iter = val_iter if val_iter else self.train_iter  # 定义验证集
         self.test_iter = test_iter if test_iter else self.val_iter  # 定义测试集
 
-    def train(self, num_epochs, learning_rate):
+    def train(self, num_epochs: int, learning_rate: float):
         '''训练模型'''
         self.set_timer()  # 设置计时器
         self.set_loss()  # 设置损失函数
@@ -31,11 +32,11 @@ class MachineLearning:
         '''设置损失函数'''
         self.loss = nn.CrossEntropyLoss()  # 定义损失函数
 
-    def set_optimizer(self, learning_rate):
+    def set_optimizer(self, learning_rate: float):
         '''设置优化器'''
         self.optimizer = optim.SGD(self.model.parameters(), learning_rate)  # 定义优化器
 
-    def set_animator(self, num_epochs):
+    def set_animator(self, num_epochs: int):
         '''设置Animator'''
         self.animator = Animator(line_num=3, xlabel='epoch', xlim=[0, num_epochs+1], ylim=-0.1, legend=['train loss', 'val loss', 'val acc'])
 
@@ -76,28 +77,28 @@ class MachineLearning:
         self.val_loss = metric[0] / metric[2]
         self.val_acc = metric[1] / metric[2]
 
-    def transform_x(self, x):
+    def transform_x(self, x: torch.Tensor) -> torch.Tensor:
         '''转换x'''
         return x.to(self.device)
 
-    def transform_y(self, y):
+    def transform_y(self, y: torch.Tensor) -> torch.Tensor:
         '''转换y'''
         return y.to(self.device)
 
-    def calculate_model(self, x):
+    def calculate_model(self, x: torch.Tensor) -> torch.Tensor:
         '''计算神经网络'''
         return self.model(x)
 
-    def calculate_loss(self, y_hat, y):
+    def calculate_loss(self, y_hat: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         '''计算损失函数'''
         return self.loss(y_hat, y)
 
-    def calculate_acc(self, y_hat, y):
+    def calculate_acc(self, y_hat: torch.Tensor, y: torch.Tensor) -> int:
         '''计算准确率'''
         y_hat = y_hat.argmax(dim=1)
         return (y_hat == y).sum()
 
-    def grad_update(self, loss):
+    def grad_update(self, loss: torch.Tensor):
         '''梯度更新'''
         self.optimizer.zero_grad()
         loss.backward()
