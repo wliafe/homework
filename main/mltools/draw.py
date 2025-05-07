@@ -1,4 +1,3 @@
-import torch
 from IPython import display
 from matplotlib import pyplot as plt
 
@@ -6,13 +5,13 @@ from matplotlib import pyplot as plt
 class Animator:
     """在动画中绘制数据"""
 
-    def __init__(self, *, line_num, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None):
+    def __init__(self, *, line_num: int, xlabel: str = None, ylabel: str = None, xlim=None, ylim=None, legend: list[str] = None):
         self.fig, self.axes = plt.subplots()  # 生成画布
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
         self.legend = legend  # 初始化标签
         self.X, self.Y = [[] for _ in range(line_num)], [[] for _ in range(line_num)]  # 初始化数据容器
 
-    def add(self, *y):
+    def add(self, *y: tuple[int]):
         '''添加数据'''
         for index, item in enumerate(y):
             self.Y[index].append(item)
@@ -28,7 +27,7 @@ class Animator:
         display.clear_output(wait=True)  # 清除输出
 
 
-def images(images, labels, shape):
+def images(images, labels: list[str], shape: tuple[int, int]):
     '''展示图片'''
     images = images.squeeze(1).to(device='cpu')
     fig, axes = plt.subplots(*shape)

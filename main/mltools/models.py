@@ -6,7 +6,7 @@ from torch.nn import functional as F
 class RNNModel(nn.Module):
     '''循环神经网络模型'''
 
-    def __init__(self, rnn_layer, vocab_size, step_size=1, output_size=None, one_hot=True, **kwargs):
+    def __init__(self, rnn_layer, vocab_size: int, step_size: int = 1, output_size: int = None, one_hot: bool = True, **kwargs):
         '''初始化函数'''
         super(RNNModel, self).__init__(**kwargs)
         self.rnn, self.vocab_size, self.step_size, self.one_hot = rnn_layer, vocab_size, step_size, one_hot

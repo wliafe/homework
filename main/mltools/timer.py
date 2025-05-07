@@ -13,19 +13,19 @@ class Timer:
         """启动计时器"""
         self.tik = time.time()
 
-    def stop(self):
+    def stop(self) -> float:
         """停止计时器并将时间记录在列表中"""
         self.times.append(time.time() - self.tik)
         return self.times[-1]
 
-    def avg(self):
+    def avg(self) -> float:
         """返回平均时间"""
         return sum(self.times) / len(self.times)
 
-    def sum(self):
+    def sum(self) -> float:
         """返回时间总和"""
         return sum(self.times)
 
-    def cumsum(self):
+    def cumsum(self) -> list[float]:
         """返回累计时间"""
         return np.array(self.times).cumsum().tolist()

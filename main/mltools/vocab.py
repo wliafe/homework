@@ -1,7 +1,7 @@
 class Vocab:
     '''词元表'''
 
-    def __init__(self, tokens, min_freq=0, reserved_tokens=None):
+    def __init__(self, tokens: dict, min_freq: int = 0, reserved_tokens: list[str] = None):
         '''初始化'''
         if not reserved_tokens:  # 保留词元
             reserved_tokens = []
@@ -15,17 +15,17 @@ class Vocab:
         self.token_to_idx.update(reserved_tokens_dict)
         self.token_to_idx.update(tokens_dict)
 
-    def __len__(self):
+    def __len__(self) -> int:
         '''返回词表大小'''
         return len(self.idx_to_token)
 
-    def __getitem__(self, indices):
+    def __getitem__(self, indices: int | list[int] | tuple[int]) -> str | list[str]:
         '''根据索引返回词元'''
         if isinstance(indices, (list, tuple)):
             return [self.__getitem__(index) for index in indices]
         return self.idx_to_token[indices]
 
-    def to_indices(self, tokens):
+    def to_indices(self, tokens: str | list[str] | tuple[str]) -> int | list[int]:
         '''根据词元返回索引'''
         if isinstance(tokens, (list, tuple)):
             return [self.to_indices(token) for token in tokens]
