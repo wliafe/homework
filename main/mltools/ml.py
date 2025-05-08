@@ -1,5 +1,4 @@
 import torch
-from torch import nn, optim
 from .draw import Animator
 from .timer import Timer
 from .accumulator import Accumulator
@@ -13,11 +12,9 @@ class MachineLearning:
         self.val_iter = val_iter if val_iter else self.train_iter  # 定义验证集
         self.test_iter = test_iter if test_iter else self.val_iter  # 定义测试集
 
-    def train(self, num_epochs: int, learning_rate: float):
+    def train(self, num_epochs: int):
         '''训练模型'''
         self.set_timer()  # 设置计时器
-        self.set_loss()  # 设置损失函数
-        self.set_optimizer(learning_rate)  # 定义优化器
         self.set_animator(num_epochs)  # 设置Animator
         for self.num_epoch in range(1, num_epochs+1):
             self.train_epoch()
@@ -25,15 +22,16 @@ class MachineLearning:
             self.output_print()
 
     def set_timer(self):
-        self.timer = Timer()  # 设置计时器
+        '''设置计时器'''
+        self.timer = Timer()
 
-    def set_loss(self):
+    def set_loss(self, loss):
         '''设置损失函数'''
-        self.loss = nn.CrossEntropyLoss()  # 定义损失函数
+        self.loss = loss
 
-    def set_optimizer(self, learning_rate: float):
+    def set_optimizer(self, optimizer):
         '''设置优化器'''
-        self.optimizer = optim.SGD(self.model.parameters(), learning_rate)  # 定义优化器
+        self.optimizer = optimizer
 
     def set_animator(self, num_epochs: int):
         '''设置Animator'''
