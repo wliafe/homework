@@ -33,16 +33,13 @@ class RNNModel(MyModel):
         return x, state
 
 
-class TransformerEncodeModel(MyModel):
+class TransformerEncodeCModel(MyModel):
     '''Transformer模型'''
 
-    def __init__(self, vocab_size: int, output_size: int, d_model: int = 256, nhead: int = 8, batch_first: bool = True, encode_num_layers: int = 6, *args, **kwargs):
+    def __init__(self, embedding, transformer_layer, input_size: int, output_size: int, *args, **kwargs):
         '''初始化函数'''
-        embedding = nn.Embedding(vocab_size, d_model, padding_idx=1)  # 定义嵌入函数
-        encode_layer = nn.TransformerEncoderLayer(d_model, nhead, batch_first=batch_first)
-        hidden_layer = nn.TransformerEncoder(encode_layer, encode_num_layers)  # 定义TransformerEncoder
-        output_layer = nn.Linear(d_model, output_size)  # 定义输出层
-        MyModel.__init__(self, embedding, hidden_layer, output_layer, *args, **kwargs)
+        output_layer = nn.Linear(input_size, output_size)  # 定义输出层
+        MyModel.__init__(self, embedding, transformer_layer, output_layer, *args, **kwargs)
 
     def forward(self, x):
         '''前向传播'''
