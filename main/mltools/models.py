@@ -6,9 +6,9 @@ from torch.nn import functional as F
 class RNNModel(nn.Module):
     '''循环神经网络模型'''
 
-    def __init__(self, rnn_layer, vocab_size: int, step_size: int = 1, output_size: int = None, one_hot: bool = True, **kwargs):
+    def __init__(self, rnn_layer, vocab_size: int, step_size: int = 1, output_size: int = None, one_hot: bool = True, *args, **kwargs):
         '''初始化函数'''
-        super(RNNModel, self).__init__(**kwargs)
+        nn.Module.__init__(self, *args, **kwargs)
         self.rnn, self.vocab_size, self.step_size, self.one_hot = rnn_layer, vocab_size, step_size, one_hot
         self.output_size = output_size if output_size else vocab_size
         self.hidden_size = self.rnn.hidden_size
@@ -17,8 +17,8 @@ class RNNModel(nn.Module):
 
     def forward(self, inputs, state=None):
         '''前向传播'''
-        X = F.one_hot(inputs.long(), self.vocab_size) if self.one_hot else inputs  # 将输入独热编码，X形状为(批量大小, 时间步数, 词表大小)
-        X = X.to(torch.float32)
-        Y, state = self.rnn(X, state)  # Y形状为(批量大小, 时间步数, 隐藏大小),state形状为(隐藏层数*num_directions, 批量大小, 隐藏大小)
-        output = self.linear(Y.reshape(-1, self.step_size * self.hidden_size * self.directions))  # 它的输出形状是(批量大小, 输出大小)。
+        x = F.one_hot(inputs.long(), self.vocab_size) if self.one_hot else inputs  # 将输入独热编码，X形状为(批量大小, 时间步数, 词表大小)
+        x = x.to(torch.float32)
+        y, state = self.rnn(x, state)  # Y形状为(批量大小, 时间步数, 隐藏大小),state形状为(隐藏层数*num_directions, 批量大小, 隐藏大小)
+        output = self.linear(y.reshape(-1, self.step_size * self.hidden_size * self.directions))  # 它的输出形状是(批量大小, 输出大小)
         return output, state

@@ -71,7 +71,8 @@ class MachineLearning:
                 y_val = self.calculate_model(x)  # 计算模型
                 y = self.transform_y(y)  # 转换y
                 val_loss = self.calculate_loss(y_val, y)  # 计算验证损失
-                val_acc = self.calculate_acc(y_val, y)  # 计算验证准确率
+                val_pred = self.calculate_pred(y_val)  # 计算预测值
+                val_acc = self.calculate_acc(val_pred, y)  # 计算验证准确率
                 metric.add(val_loss * len(y), val_acc, len(y))
         self.val_loss = metric[0] / metric[2]
         self.val_acc = metric[1] / metric[2]
@@ -92,10 +93,13 @@ class MachineLearning:
         '''计算损失函数'''
         return self.loss(y_hat, y)
 
-    def calculate_acc(self, y_hat, y):
+    def calculate_pred(self, y):
+        '''计算预测值'''
+        return y.argmax(dim=1)
+
+    def calculate_acc(self, pred, real):
         '''计算准确率'''
-        y_hat = y_hat.argmax(dim=1)
-        return (y_hat == y).sum()
+        return (pred == real).sum()
 
     def grad_update(self, loss):
         '''梯度更新'''
@@ -117,6 +121,20 @@ class MachineLearning:
                 x = self.transform_x(x)  # 转换x
                 y_test = self.calculate_model(x)  # 计算模型
                 y = self.transform_y(y)  # 转换y
-                test_acc = self.calculate_acc(y_test, y)  # 计算测试准确率
+                test_pred = self.calculate_pred(y_test)  # 计算准确率
+                test_acc = self.calculate_acc(test_pred, y)  # 计算测试准确率
                 metric.add(test_acc, len(y))
         print(f'Accuracy rate {metric[0] / metric[1]}')  # 计算测试准确率并输出
+
+    def predict(self):
+        '''预测模型'''
+        x, y = next(iter(self.test_iter))  # 从测试中取一个批量
+        x = self.transform_x(x[:10])
+        y = self.transform_y(y[:10])
+        y_pred = self.calculate_model(x)  # 计算模型
+        y_pred = self.calculate_pred(y_pred)  # 计算预测
+        self.show_pred(x, y_pred, y)
+
+    def show_pred(self, x, pred, real):
+        '''显示预测'''
+        raise NotImplementedError
