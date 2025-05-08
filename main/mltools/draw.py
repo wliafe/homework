@@ -29,7 +29,7 @@ class Animator:
 
 def images(images, labels: list[str], shape: tuple[int, int]):
     '''展示图片'''
-    images = images.squeeze(1).to(device='cpu')
+    images = images.to(device='cpu')
     fig, axes = plt.subplots(*shape)
     axes = [element for sublist in axes for element in sublist]
     for ax, img, label in zip(axes, images, labels):

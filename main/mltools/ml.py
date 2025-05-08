@@ -133,8 +133,8 @@ class MachineLearning:
         y = self.transform_y(y[:10])
         y_pred = self.calculate_model(x)  # 计算模型
         y_pred = self.calculate_pred(y_pred)  # 计算预测
-        self.show_pred(x, y_pred, y)
+        self.show_pred(x, y_pred, y)  # 显示预测
 
-    def show_pred(self, x, pred, real):
+    def show_pred(self, contents, preds, reals):
         '''显示预测'''
         raise NotImplementedError
