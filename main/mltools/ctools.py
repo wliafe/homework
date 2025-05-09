@@ -132,6 +132,7 @@ class MachineLearning:
             x = self.transform_x(x)  # 转换x
             y_train = self.calculate_model(x)  # 计算模型
             y = self.transform_y(y)  # 转换y
+            y_train = self.transform_model_result(y_train)  # 转换模型结果
             train_loss = self.calculate_loss(y_train, y)  # 计算训练损失
             self.grad_update(train_loss)  # 梯度更新
             metric.add(train_loss * len(y), len(y))
@@ -146,6 +147,7 @@ class MachineLearning:
                 x = self.transform_x(x)  # 转换x
                 y_val = self.calculate_model(x)  # 计算模型
                 y = self.transform_y(y)  # 转换y
+                y_val = self.transform_model_result(y_val)  # 转换模型结果
                 val_loss = self.calculate_loss(y_val, y)  # 计算验证损失
                 val_pred = self.calculate_pred(y_val)  # 计算预测值
                 val_acc = self.calculate_acc(val_pred, y)  # 计算验证准确率
@@ -164,6 +166,10 @@ class MachineLearning:
     def calculate_model(self, x):
         '''计算神经网络'''
         return self.model(x)
+
+    def transform_model_result(self, y):
+        '''转换模型结果'''
+        return y
 
     def calculate_loss(self, y_hat, y):
         '''计算损失函数'''
@@ -197,6 +203,7 @@ class MachineLearning:
                 x = self.transform_x(x)  # 转换x
                 y_test = self.calculate_model(x)  # 计算模型
                 y = self.transform_y(y)  # 转换y
+                y_test = self.transform_model_result(y_test)  # 转换模型结果
                 test_pred = self.calculate_pred(y_test)  # 计算准确率
                 test_acc = self.calculate_acc(test_pred, y)  # 计算测试准确率
                 metric.add(test_acc, len(y))

@@ -47,3 +47,18 @@ class TransformerEncodeCModel(MyModel):
         x = self.hidden_layer(x)
         x = self.output_layer(x[:, 0, :])
         return x
+
+class TransformerEncodeTPModel(MyModel):
+    '''Transformer模型'''
+
+    def __init__(self, embedding, transformer_layer, input_size, output_size, *args, **kwargs):
+        '''初始化函数'''
+        output_layer = nn.Linear(input_size, output_size)  # 定义输出层
+        MyModel.__init__(self, embedding, transformer_layer, output_layer, *args, **kwargs)
+
+    def forward(self, x):
+        '''前向传播'''
+        x = self.embedding(x)
+        x = self.hidden_layer(x)
+        x = self.output_layer(x)
+        return x
