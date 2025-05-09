@@ -5,23 +5,19 @@ from matplotlib import pyplot as plt
 class Animator:
     """在动画中绘制数据"""
 
-    def __init__(self, *, line_num: int, xlabel: str = None, ylabel: str = None, xlim=None, ylim=None, legend: list[str] = None):
+    def __init__(self, *, xlabel: str = None, ylabel: str = None, xlim=None, ylim=None):
         self.fig, self.axes = plt.subplots()  # 生成画布
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
-        self.legend = legend  # 初始化标签
-        self.X, self.Y = [[] for _ in range(line_num)], [[] for _ in range(line_num)]  # 初始化数据容器
 
-    def add(self, *y: tuple[int]):
-        '''添加数据'''
-        for index, item in enumerate(y):
-            self.Y[index].append(item)
-            self.X[index].append(len(self.Y[index]))
+    def show(self, Y: list[list[int]], legend: list[str] = None):
+        '''展示动画'''
+        X = [list(range(1, len(sublist)+1)) for sublist in Y]
         self.axes.cla()  # 清除画布
-        for x, y, fmt in zip(self.X, self.Y, ('-', 'm--', 'g-.', 'r:')):
+        for x, y, fmt in zip(X, Y, ('-', 'm--', 'g-.', 'r:')):
             self.axes.plot(x, y, fmt)
         self.set_axes()  # 设置axes
-        if self.legend:
-            self.axes.legend(self.legend)  # 设置标签
+        if legend:
+            self.axes.legend(legend)  # 设置标签
         self.axes.grid()  # 设置网格线
         display.display(self.fig)  # 画图
         display.clear_output(wait=True)  # 清除输出
