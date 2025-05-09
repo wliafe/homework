@@ -6,7 +6,7 @@ from collections import Counter
 from .vocab import Vocab
 
 
-def _split_data(datas, ratio: float):
+def _split_data(datas, ratio):
     '''将数据按比例随机分割'''
     ratio = [r/sum(ratio) for r in ratio]
     nums = [int(len(datas)*r) for r in ratio]
@@ -14,12 +14,12 @@ def _split_data(datas, ratio: float):
     return data.random_split(datas, nums)
 
 
-def _iter_data(datas, batch_size: int, shuffle: bool = True):
+def _iter_data(datas, batch_size, shuffle=True):
     '''将批量数据转换为迭代器'''
     return (data.DataLoader(_data, batch_size=batch_size, shuffle=shuffle) for _data in datas)
 
 
-def mnist(path: str, *, batch_size: int = 100, download: bool = False):
+def mnist(path, *, batch_size=100, download=False):
     '''加载数据集MNIST, 返回训练集、验证集、测试集迭代器'''
     trans = transforms.ToTensor()  # 数据集格式转换
     train_data = datasets.MNIST(root=path, train=True, transform=trans, download=download)
@@ -28,7 +28,7 @@ def mnist(path: str, *, batch_size: int = 100, download: bool = False):
     return _iter_data([train_data, val_data, test_data], batch_size)  # 返回数据迭代器
 
 
-def chn_senti_corp(path: str, *, batch_size: int = 100, step_size: int = 200):
+def chn_senti_corp(path, *, batch_size=100, step_size=200):
     '''加载数据集ChnSentiCorp, 返回词表和训练集、验证集、测试集迭代器'''
     chn_senti_corp = pd.read_csv(path)  # 读数据集
 

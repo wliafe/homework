@@ -16,7 +16,7 @@ class MyModel(nn.Module):
 class RNNModel(MyModel):
     '''循环神经网络模型'''
 
-    def __init__(self, embedding, rnn_layer, step_size: int, output_size: int,  *args, **kwargs):
+    def __init__(self, embedding, rnn_layer, step_size, output_size,  *args, **kwargs):
         '''初始化函数'''
         hidden_size = rnn_layer.hidden_size  # 定义时间步数和隐藏大小
         directions = 1 if not rnn_layer.bidirectional else 2  # 如果RNN是双向的，num_directions应该是2，否则应该是1
@@ -36,7 +36,7 @@ class RNNModel(MyModel):
 class TransformerEncodeCModel(MyModel):
     '''Transformer模型'''
 
-    def __init__(self, embedding, transformer_layer, input_size: int, output_size: int, *args, **kwargs):
+    def __init__(self, embedding, transformer_layer, input_size, output_size, *args, **kwargs):
         '''初始化函数'''
         output_layer = nn.Linear(input_size, output_size)  # 定义输出层
         MyModel.__init__(self, embedding, transformer_layer, output_layer, *args, **kwargs)

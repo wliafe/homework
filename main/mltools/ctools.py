@@ -6,11 +6,11 @@ from .draw import Animator
 class Accumulator:
     '''在n个变量上累加'''
 
-    def __init__(self, n: int):
+    def __init__(self, n):
         '''初始化'''
         self.data = [0.0] * n
 
-    def add(self, *args: tuple[int]):
+    def add(self, *args):
         '''添加'''
         self.data = [a + float(b) for a, b in zip(self.data, args)]
 
@@ -18,7 +18,7 @@ class Accumulator:
         '''重置'''
         self.data = [0.0] * len(self.data)
 
-    def __getitem__(self, idx: int) -> int:
+    def __getitem__(self, idx):
         '''返回第n个累加值'''
         return self.data[idx]
 
@@ -26,15 +26,15 @@ class Accumulator:
 class Recorder:
     '''n个记录器'''
 
-    def __init__(self, n: int):
+    def __init__(self, n):
         '''初始化'''
         self.data = [[] for _ in range(n)]
 
-    def add(self, *args: tuple[int]):
+    def add(self, *args):
         '''添加'''
         self.data = [a.append(b) for a, b in zip(self.data, args)]
 
-    def get_latest_record(self) -> tuple[float]:
+    def get_latest_record(self):
         '''返回最新记录'''
         return (item[-1] for item in self.data)
 
@@ -46,7 +46,7 @@ class Recorder:
         '''重置'''
         self.data = [[] for _ in range(len(self.data))]
 
-    def __getitem__(self, idx: int) -> list[int]:
+    def __getitem__(self, idx):
         '''返回第n个记录器'''
         return self.data[idx]
 
@@ -62,16 +62,16 @@ class Timer:
         '''启动计时器'''
         self.tik = time.time()
 
-    def stop(self) -> float:
+    def stop(self):
         '''停止计时器并将时间记录在列表中'''
         self.times.append(time.time() - self.tik)
         return self.times[-1]
 
-    def avg(self) -> float:
+    def avg(self):
         '''返回平均时间'''
         return sum(self.times) / len(self.times)
 
-    def sum(self) -> float:
+    def sum(self):
         '''返回时间总和'''
         return sum(self.times)
 
@@ -102,7 +102,7 @@ class MachineLearning:
         '''设置优化器'''
         self.optimizer = optimizer
 
-    def train(self, num_epochs: int):
+    def train(self, num_epochs):
         '''训练模型'''
         self.set_animator(num_epochs)  # 设置Animator
         for self.num_epoch in range(1, num_epochs+1):
@@ -110,7 +110,7 @@ class MachineLearning:
         else:
             self.output_print()
 
-    def set_animator(self, num_epochs: int):
+    def set_animator(self, num_epochs):
         '''设置Animator'''
         rlim = num_epochs + self.recorder.max_record_size()  # 计算xlim的右边界
         self.animator = Animator(xlabel='epoch', xlim=[0, rlim+1], ylim=-0.1)
@@ -200,10 +200,11 @@ class MachineLearning:
                 test_pred = self.calculate_pred(y_test)  # 计算准确率
                 test_acc = self.calculate_acc(test_pred, y)  # 计算测试准确率
                 metric.add(test_acc, len(y))
-        print(f'Accuracy rate {metric[0] / metric[1]}')  # 计算测试准确率并输出
+        print(f'Accuracy rate {metric[0] / metric[1]:.3f}')  # 计算测试准确率并输出
 
     def predict(self):
         '''预测模型'''
+        self.model.eval()  # 验证模式
         x, y = next(iter(self.test_iter))  # 从测试中取一个批量
         x = self.transform_x(x[:10])
         y = self.transform_y(y[:10])

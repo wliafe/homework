@@ -5,11 +5,11 @@ from matplotlib import pyplot as plt
 class Animator:
     """在动画中绘制数据"""
 
-    def __init__(self, *, xlabel: str = None, ylabel: str = None, xlim=None, ylim=None):
+    def __init__(self, *, xlabel=None, ylabel=None, xlim=None, ylim=None):
         self.fig, self.axes = plt.subplots()  # 生成画布
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
 
-    def show(self, Y: list[list[int]], legend: list[str] = None):
+    def show(self, Y, legend=None):
         '''展示动画'''
         X = [list(range(1, len(sublist)+1)) for sublist in Y]
         self.axes.cla()  # 清除画布
@@ -23,7 +23,7 @@ class Animator:
         display.clear_output(wait=True)  # 清除输出
 
 
-def images(images, labels: list[str], shape: tuple[int, int]):
+def images(images, labels, shape):
     '''展示图片'''
     images = images.to(device='cpu')
     fig, axes = plt.subplots(*shape)
