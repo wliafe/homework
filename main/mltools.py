@@ -241,6 +241,7 @@ class MachineLearning:
         self.set_timer()  # 设置计时器
         self.set_recorder(recorder_num)  # 设置记录器
         self.set_logger()  # 设置日志
+        self.logger.debug(f'model is {self.model}')
 
     def set_timer(self):
         '''设置计时器'''
