@@ -276,18 +276,18 @@ class MachineLearning:
         self.optimizer = optimizer
         self.logger.debug(f'optimizer is {self.optimizer.__class__.__name__}, learning rate is {self.optimizer.param_groups[0]["lr"]}')
 
-    def train(self, num_epochs):
-        '''训练模型'''
-        rlim = num_epochs + self.recorder.max_record_size()  # 计算xlim的右边界
-        self.animator = Animator(xlabel='epoch', xlim=[0, rlim + 1], ylim=-0.1)
-        self.logger.debug(f'num_epochs is {num_epochs}')
-
-    def save(self):
-        '''保存模型'''
-        self.animator.save(f'{self.file_name}.png')
-        self.logger.info(f'save animation to {self.file_name}.png')
-        torch.save(self.model.state_dict(), f'{self.file_name}.pth')
-        self.logger.info(f'save model to {self.file_name}.pth')
+    def trainer(func):
+        '''训练装饰器'''
+        def wrapper(self, num_epochs):
+            rlim = num_epochs + self.recorder.max_record_size()  # 计算xlim的右边界
+            self.animator = Animator(xlabel='epoch', xlim=[0, rlim + 1], ylim=-0.1)
+            self.logger.debug(f'num_epochs is {num_epochs}')
+            func(self, num_epochs)
+            self.animator.save(f'{self.file_name}.png')
+            self.logger.debug(f'save animation to {self.file_name}.png')
+            torch.save(self.model.state_dict(), f'{self.file_name}.pth')
+            self.logger.debug(f'save model to {self.file_name}.pth')
+        return wrapper
 
     def load(self, time_str=None):
         '''加载模型'''
@@ -299,10 +299,16 @@ class MachineLearning:
         else:
             self.logger.error(f'file {file_name} not exists')
 
-    def test(self):
-        '''测试模型'''
-        self.model.eval()  # 验证模式
+    def tester(func):
+        '''测试装饰器'''
+        def wrapper(self):
+            self.model.eval()  # 验证模式
+            func(self)
+        return wrapper
 
-    def predict(self):
-        '''预测模型'''
-        self.model.eval()  # 验证模式
+    def predictor(func):
+        '''预测装饰器'''
+        def wrapper(self):
+            self.model.eval()  # 验证模式
+            func(self)
+        return wrapper
