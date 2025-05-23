@@ -236,7 +236,7 @@ class MachineLearning:
         self.val_iter = val_iter if val_iter else self.train_iter  # 定义验证集
         self.test_iter = test_iter if test_iter else self.val_iter  # 定义测试集
         self.time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # 定义时间字符串
-        self.file_name = f'../results/{self.time_str}-{self.__class__.__name__}/{self.time_str}-{self.__class__.__name__}'
+        self.file_name = f'../results/{self.time_str}-{self.__class__.__name__}/{self.__class__.__name__}'
 
         # 创建目录
         for path in [f'../results', f'../results/{self.time_str}-{self.__class__.__name__}']:
