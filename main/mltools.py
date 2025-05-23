@@ -287,6 +287,12 @@ class MachineLearning:
         self.animator.save(f'{self.file_name}.png')
         torch.save(self.model.state_dict(), f'{self.file_name}.pth')
 
+    def load(self, time_str=None):
+        '''加载模型'''
+        time_str = time_str if time_str else self.time_str
+        file_name = f'../results/{time_str}-{self.__class__.__name__}/{self.__class__.__name__}'
+        self.model.load_state_dict(torch.load(file_name))
+
     def test(self):
         '''测试模型'''
         self.model.eval()  # 验证模式
