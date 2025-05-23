@@ -237,22 +237,17 @@ class MachineLearning:
         self.test_iter = test_iter if test_iter else self.val_iter  # 定义测试集
         self.time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # 定义时间字符串
         self.file_name = f'../results/{self.time_str}-{self.__class__.__name__}/{self.time_str}-{self.__class__.__name__}'
-        self._make_directories([f'../results', f'../results/{self.time_str}-{self.__class__.__name__}'])  # 创建目录
-        self.set_timer()  # 设置计时器
-        self.set_recorder(recorder_num)  # 设置记录器
-        self.set_logger()  # 设置日志
-        self.logger.debug(f'model is {self.model}')
 
-    def set_timer(self):
-        '''设置计时器'''
-        self.timer = Timer()
+        # 创建目录
+        for path in [f'../results', f'../results/{self.time_str}-{self.__class__.__name__}']:
+            if not Path(path).exists():
+                Path(path).mkdir()
+        
+        self.timer = Timer()  # 设置计时器
+        
+        self.recorder = Recorder(recorder_num)  # 设置记录器
 
-    def set_recorder(self, recorder_num):
-        '''设置记录器'''
-        self.recorder = Recorder(recorder_num)
-
-    def set_logger(self):
-        '''设置日志'''
+        # 设置日志
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
         # 创建文件处理器
@@ -269,6 +264,8 @@ class MachineLearning:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
+        self.logger.debug(f'model is {self.model}')
+
     def set_loss(self, loss):
         '''设置损失函数'''
         self.loss = loss
@@ -284,26 +281,16 @@ class MachineLearning:
         rlim = num_epochs + self.recorder.max_record_size()  # 计算xlim的右边界
         self.animator = Animator(xlabel='epoch', xlim=[0, rlim + 1], ylim=-0.1)
         self.logger.debug(f'num_epochs is {num_epochs}')
-        self.train_epochs(num_epochs)
+
+    def save(self):
+        '''保存模型'''
         self.animator.save(f'{self.file_name}.png')
         torch.save(self.model.state_dict(), f'{self.file_name}.pth')
 
-    def train_epochs(self, num_epochs):
-        '''一个迭代周期'''
-        raise NotImplementedError
-
     def test(self):
         '''测试模型'''
-        raise NotImplementedError
+        self.model.eval()  # 验证模式
 
     def predict(self):
         '''预测模型'''
-        raise NotImplementedError
-
-    def _make_directories(self, paths):
-        '''创建目录'''
-        if not isinstance(paths, list):
-            paths = [paths]
-        for path in paths:
-            if not Path(path).exists():
-                Path(path).mkdir()
+        self.model.eval()  # 验证模式
