@@ -285,13 +285,19 @@ class MachineLearning:
     def save(self):
         '''保存模型'''
         self.animator.save(f'{self.file_name}.png')
+        self.logger.info(f'save animation to {self.file_name}.png')
         torch.save(self.model.state_dict(), f'{self.file_name}.pth')
+        self.logger.info(f'save model to {self.file_name}.pth')
 
     def load(self, time_str=None):
         '''加载模型'''
         time_str = time_str if time_str else self.time_str
         file_name = f'../results/{time_str}-{self.__class__.__name__}/{self.__class__.__name__}.pth'
-        self.model.load_state_dict(torch.load(file_name))
+        if Path(file_name).exists():
+            self.model.load_state_dict(torch.load(file_name))
+            self.logger.debug(f'load model from {file_name}')
+        else:
+            self.logger.error(f'file {file_name} not exists')
 
     def test(self):
         '''测试模型'''
