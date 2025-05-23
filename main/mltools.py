@@ -242,9 +242,9 @@ class MachineLearning:
         for path in [f'../results', f'../results/{self.time_str}-{self.__class__.__name__}']:
             if not Path(path).exists():
                 Path(path).mkdir()
-        
+
         self.timer = Timer()  # 设置计时器
-        
+
         self.recorder = Recorder(recorder_num)  # 设置记录器
 
         # 设置日志
