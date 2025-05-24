@@ -249,7 +249,7 @@ class Timer:
 class MachineLearning:
     '''机器学习'''
 
-    def __init__(self, model, train_iter, val_iter, test_iter, *, loss, optimizer, recorder_num=3, legend=None, device=torch.device('cpu')):
+    def __init__(self, train_iter, val_iter, test_iter, *, model, loss, optimizer, recorder_num=3, legend=None, device=torch.device('cpu'), **kwargs):
         '''初始化函数'''
         # 定义时间字符串和文件名
         self.time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -277,15 +277,14 @@ class MachineLearning:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
-        # 设置模型
-        model.to(device)
-        self.model = model
-        self.logger.debug(f'model is {self.model}')
-
         # 设置训练集、验证集、测试集
         self.train_iter = train_iter
         self.val_iter = val_iter if val_iter else self.train_iter
         self.test_iter = test_iter if test_iter else self.val_iter
+
+        model.to(device)
+        self.model = model  # 设置模型
+        self.logger.debug(f'model is {self.model}')
 
         self.loss = loss  # 设置损失函数
         self.logger.debug(f'loss function is {self.loss.__class__.__name__}')
@@ -297,6 +296,10 @@ class MachineLearning:
 
         self.device = device  # 定义设备
         self.logger.debug(f'device is {self.device}')
+
+        # 设置其他参数
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
         self.num_epochs = 0  # 定义总迭代次数
 
@@ -323,13 +326,13 @@ class MachineLearning:
             # 开始训练
             func(self, *args, num_epoch, **kwargs)
 
-            # 保存记录
-            self.recorder.save(f'{self.file_name}.json')
-            self.logger.debug(f'save recorder to {self.file_name}.json')
-
             # 保存动画
             self.animator.save(f'{self.file_name}.png')
             self.logger.debug(f'save animation to {self.file_name}.png')
+
+            # 保存记录
+            self.recorder.save(f'{self.file_name}.json')
+            self.logger.debug(f'save recorder to {self.file_name}.json')
 
             # 保存模型参数
             model_parameters = {
@@ -350,9 +353,9 @@ class MachineLearning:
         # 加载记录
         if Path(f'{file_name}.json').exists():
             self.recorder.load(f'{file_name}.json')
-            self.logger.debug(f'load recorder from {f'{file_name}.josn'}')
+            self.logger.debug(f'load recorder from {file_name}.josn')
         else:
-            self.logger.warning(f'file {f'{file_name}.json'} not exists')
+            self.logger.warning(f'file {file_name}.json not exists')
 
         # 加载模型参数
         if Path(f'{file_name}.pth').exists():
@@ -361,9 +364,9 @@ class MachineLearning:
             self.optimizer.load_state_dict(model_parameters['optimizer_state_dict'])
             self.num_epochs = model_parameters['num_epochs']
             self.loss = model_parameters['loss']
-            self.logger.debug(f'load model parameters from {f'{file_name}.pth'}')
+            self.logger.debug(f'load model parameters from {file_name}.pth')
         else:
-            self.logger.warning(f'file {f'{file_name}.pth'} not exists')
+            self.logger.warning(f'file {file_name}.pth not exists')
 
     def tester(func):
         '''测试装饰器'''
