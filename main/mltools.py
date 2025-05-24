@@ -25,10 +25,10 @@ class Vocab:
             reserved_tokens = []
         self.unk = 0  # 未知词元索引为0
         tokens = [item[0] for item in tokens.items() if item[1] > min_freq]  # 删除低频词元
-        self.idx_to_token = ['<unk>']+reserved_tokens+tokens  # 建立词元列表
+        self.idx_to_token = ['<unk>'] + reserved_tokens + tokens  # 建立词元列表
         # 建立词元字典
-        reserved_tokens_dict = {value: index+1 for index, value in enumerate(reserved_tokens)}
-        tokens_dict = {value: index+1+len(reserved_tokens_dict) for index, value in enumerate(tokens)}
+        reserved_tokens_dict = {value: index + 1 for index, value in enumerate(reserved_tokens)}
+        tokens_dict = {value: index + 1 + len(reserved_tokens_dict) for index, value in enumerate(tokens)}
         self.token_to_idx = {'<unk>': 0}
         self.token_to_idx.update(reserved_tokens_dict)
         self.token_to_idx.update(tokens_dict)
@@ -56,9 +56,9 @@ class Vocab:
 # 数据集加载器的参数是数据集的路径、批量大小、是否下载数据集
 def _split_data(datas, ratio):
     '''将数据按比例随机分割'''
-    ratio = [r/sum(ratio) for r in ratio]
-    nums = [int(len(datas)*r) for r in ratio]
-    nums[-1] = len(datas)-sum(nums[:-1])
+    ratio = [r / sum(ratio) for r in ratio]
+    nums = [int(len(datas) * r) for r in ratio]
+    nums[-1] = len(datas) - sum(nums[:-1])
     return data.random_split(datas, nums)
 
 
@@ -89,7 +89,7 @@ def chn_senti_corp(path, *, batch_size=100, step_size=200):
 
     # 加载并划分数据集
     chn_senti_corp_feature = [vocab.to_indices(list(str(item))[:step_size]) for item in chn_senti_corp.iloc[:, 1].values]  # 读取评论转为数字列表，评论限制在200字内
-    chn_senti_corp_feature = torch.tensor([item+[1]*(step_size-len(item)) for item in chn_senti_corp_feature])  # 将列表转为tensor，同时空内容用<pad>填充
+    chn_senti_corp_feature = torch.tensor([item + [1] * (step_size - len(item)) for item in chn_senti_corp_feature])  # 将列表转为tensor，同时空内容用<pad>填充
     chn_senti_corp_label = torch.tensor(chn_senti_corp.iloc[:, 0].values)  # 将标签转为tensor
     chn_senti_corp_data = data.TensorDataset(chn_senti_corp_feature, chn_senti_corp_label)  # 生成Dataset
     train_data, val_data, test_data = _split_data(chn_senti_corp_data, [0.7, 0.15, 0.15])  # 划分训练集、验证集、测试集
@@ -112,7 +112,7 @@ class Animator:
 
     def show(self, Y):
         '''展示动画'''
-        X = [list(range(1, len(sublist)+1)) for sublist in Y]
+        X = [list(range(1, len(sublist) + 1)) for sublist in Y]
         self.axes.cla()  # 清除画布
         for x, y, fmt in zip(X, Y, ('-', 'm--', 'g-.', 'r:')):
             self.axes.plot(x, y, fmt)
