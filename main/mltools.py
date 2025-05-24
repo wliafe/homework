@@ -235,7 +235,10 @@ class Timer:
 
     def avg(self):
         '''返回平均时间'''
-        return sum(self.times) / len(self.times)
+        if self.times:
+            return sum(self.times) / len(self.times)
+        else:
+            return 0
 
     def sum(self):
         '''返回时间总和'''
@@ -359,7 +362,7 @@ class MachineLearning:
 
         # 加载模型参数
         if Path(f'{file_name}.pth').exists():
-            model_parameters = torch.load(f'{file_name}.pth')
+            model_parameters = torch.load(f'{file_name}.pth', weights_only=False)
             self.model.load_state_dict(model_parameters['model_state_dict'])
             self.optimizer.load_state_dict(model_parameters['optimizer_state_dict'])
             self.num_epochs = model_parameters['num_epochs']
