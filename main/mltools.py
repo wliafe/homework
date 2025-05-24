@@ -1,6 +1,7 @@
 import torch
 from torch.utils import data
 from torchvision import transforms, datasets
+import json
 import time
 import logging
 import pandas as pd
@@ -192,6 +193,24 @@ class Recorder:
         '''返回第n个记录器'''
         return self.data[idx]
 
+    def save(self, path):
+        '''保存到json文件'''
+        with open(path, 'w') as f:
+            json.dump(self.to_dict(), f)
+
+    def to_dict(self):
+        '''返回字典'''
+        return {str(i): item for i, item in enumerate(self.data)}
+
+    def load(self, path):
+        '''从json文件导入'''
+        with open(path, 'r') as f:
+            self.from_dict(json.load(f))
+
+    def from_dict(self, dict_data):
+        '''从字典导入'''
+        self.data = [item for item in dict_data.values()]
+
 
 # Timer 计时器
 # 计时器是类，用于记录多个变量
@@ -284,6 +303,8 @@ class MachineLearning:
             self.animator = Animator(xlabel='epoch', xlim=[0, rlim + 1], ylim=-0.1)
             self.logger.debug(f'num_epochs is {num_epochs}')
             func(self, *args, num_epochs, **kwargs)
+            self.recorder.save(f'{self.file_name}.json')
+            self.logger.debug(f'save recorder to {self.file_name}.json')
             self.animator.save(f'{self.file_name}.png')
             self.logger.debug(f'save animation to {self.file_name}.png')
             torch.save(self.model.state_dict(), f'{self.file_name}.pth')
@@ -293,12 +314,19 @@ class MachineLearning:
     def load(self, time_str=None):
         '''加载模型'''
         time_str = time_str if time_str else self.time_str
-        file_name = f'../results/{time_str}-{self.__class__.__name__}/{self.__class__.__name__}.pth'
-        if Path(file_name).exists():
-            self.model.load_state_dict(torch.load(file_name))
-            self.logger.debug(f'load model from {file_name}')
+        file_name = f'../results/{time_str}-{self.__class__.__name__}/{self.__class__.__name__}'
+
+        if Path(f'{file_name}.json').exists():
+            self.recorder.load(f'{file_name}.json')
+            self.logger.debug(f'load recorder from {f'{file_name}.josn'}')
         else:
-            self.logger.error(f'file {file_name} not exists')
+            self.logger.error(f'file {f'{file_name}.json'} not exists')
+
+        if Path(f'{file_name}.pth').exists():
+            self.model.load_state_dict(torch.load(f'{file_name}.pth'))
+            self.logger.debug(f'load model from {f'{file_name}.pth'}')
+        else:
+            self.logger.error(f'file {f'{file_name}.pth'} not exists')
 
     def tester(func):
         '''测试装饰器'''
