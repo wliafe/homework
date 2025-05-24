@@ -101,23 +101,24 @@ def chn_senti_corp(path, *, batch_size=100, step_size=200):
 # Animator 动画器
 # 动画器是类，用于绘制动画
 # 动画器的返回值是动画对象
-# 动画器的参数是x轴标签、y轴标签、x轴数据、y轴数据、x轴范围、y轴范围
+# 动画器的参数是x轴标签、y轴标签、x轴数据、y轴数据、x轴范围、y轴范围、图例
 class Animator:
     """在动画中绘制数据"""
 
-    def __init__(self, *, xlabel=None, ylabel=None, xlim=None, ylim=None):
+    def __init__(self, *, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None):
         self.fig, self.axes = plt.subplots()  # 生成画布
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
+        self.legend = legend  # 图例
 
-    def show(self, Y, legend=None):
+    def show(self, Y):
         '''展示动画'''
         X = [list(range(1, len(sublist)+1)) for sublist in Y]
         self.axes.cla()  # 清除画布
         for x, y, fmt in zip(X, Y, ('-', 'm--', 'g-.', 'r:')):
             self.axes.plot(x, y, fmt)
         self.set_axes()  # 设置axes
-        if legend:
-            self.axes.legend(legend)  # 设置标签
+        if self.legend:
+            self.axes.legend(self.legend)  # 设置图例
         self.axes.grid()  # 设置网格线
         display.display(self.fig)  # 画图
         display.clear_output(wait=True)  # 清除输出
@@ -248,23 +249,16 @@ class Timer:
 class MachineLearning:
     '''机器学习'''
 
-    def __init__(self, model, train_iter, val_iter, test_iter, *, recorder_num=3, device=torch.device('cpu')):
+    def __init__(self, model, train_iter, val_iter, test_iter, *, loss, optimizer, recorder_num=3, legend=None, device=torch.device('cpu')):
         '''初始化函数'''
-        model.to(device)  # 将网络复制到device上
-        self.model, self.train_iter, self.device = model, train_iter, device
-        self.val_iter = val_iter if val_iter else self.train_iter  # 定义验证集
-        self.test_iter = test_iter if test_iter else self.val_iter  # 定义测试集
-        self.time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # 定义时间字符串
+        # 定义时间字符串和文件名
+        self.time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.file_name = f'../results/{self.time_str}-{self.__class__.__name__}/{self.__class__.__name__}'
 
         # 创建目录
         for path in [f'../results', f'../results/{self.time_str}-{self.__class__.__name__}']:
             if not Path(path).exists():
                 Path(path).mkdir()
-
-        self.timer = Timer()  # 设置计时器
-
-        self.recorder = Recorder(recorder_num)  # 设置记录器
 
         # 设置日志
         self.logger = logging.getLogger()
@@ -283,32 +277,69 @@ class MachineLearning:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
+        # 设置模型
+        model.to(device)
+        self.model = model
         self.logger.debug(f'model is {self.model}')
 
-    def set_loss(self, loss):
-        '''设置损失函数'''
-        self.loss = loss
+        # 设置训练集、验证集、测试集
+        self.train_iter = train_iter
+        self.val_iter = val_iter if val_iter else self.train_iter
+        self.test_iter = test_iter if test_iter else self.val_iter
+
+        self.loss = loss  # 设置损失函数
         self.logger.debug(f'loss function is {self.loss.__class__.__name__}')
 
-    def set_optimizer(self, optimizer):
-        '''设置优化器'''
-        self.optimizer = optimizer
+        self.optimizer = optimizer  # 设置优化器
         self.logger.debug(f'optimizer is {self.optimizer.__class__.__name__}, learning rate is {self.optimizer.param_groups[0]["lr"]}')
+
+        self.legend = legend   # 定义动画标签
+
+        self.device = device  # 定义设备
+        self.logger.debug(f'device is {self.device}')
+
+        self.num_epochs = 0  # 定义总迭代次数
+
+        self.timer = Timer()  # 设置计时器
+        self.recorder = Recorder(recorder_num)  # 设置记录器
 
     def trainer(func):
         '''训练装饰器'''
 
         def wrapper(self, *args, num_epochs, **kwargs):
-            rlim = num_epochs + self.recorder.max_record_size()  # 计算xlim的右边界
-            self.animator = Animator(xlabel='epoch', xlim=[0, rlim + 1], ylim=-0.1)
-            self.logger.debug(f'num_epochs is {num_epochs}')
-            func(self, *args, num_epochs, **kwargs)
+            num_epoch = num_epochs - self.num_epochs if num_epochs > self.num_epochs else 0  # 计算迭代次数
+            self.num_epochs = max(self.num_epochs, num_epochs)  # 计算总迭代次数
+
+            # 初始化动画器
+            self.animator = Animator(xlabel='epoch', xlim=[0, self.num_epochs + 1], ylim=-0.1, legend=self.legend)
+            self.animator.show(self.recorder.data)
+
+            # 根据迭代次数产生日志
+            if num_epoch:
+                self.logger.debug(f'trained {num_epoch} times')
+            else:
+                self.logger.warning(f'num_epochs is {num_epochs}, but it is less than {self.num_epochs}, so it will not be trained')
+
+            # 开始训练
+            func(self, *args, num_epoch, **kwargs)
+
+            # 保存记录
             self.recorder.save(f'{self.file_name}.json')
             self.logger.debug(f'save recorder to {self.file_name}.json')
+
+            # 保存动画
             self.animator.save(f'{self.file_name}.png')
             self.logger.debug(f'save animation to {self.file_name}.png')
-            torch.save(self.model.state_dict(), f'{self.file_name}.pth')
-            self.logger.debug(f'save model to {self.file_name}.pth')
+
+            # 保存模型参数
+            model_parameters = {
+                'num_epochs': self.num_epochs,
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                'loss': self.loss,
+            }
+            torch.save(model_parameters, f'{self.file_name}.pth')
+            self.logger.debug(f'save model parameters to {self.file_name}.pth')
         return wrapper
 
     def load(self, time_str=None):
@@ -316,17 +347,23 @@ class MachineLearning:
         time_str = time_str if time_str else self.time_str
         file_name = f'../results/{time_str}-{self.__class__.__name__}/{self.__class__.__name__}'
 
+        # 加载记录
         if Path(f'{file_name}.json').exists():
             self.recorder.load(f'{file_name}.json')
             self.logger.debug(f'load recorder from {f'{file_name}.josn'}')
         else:
-            self.logger.error(f'file {f'{file_name}.json'} not exists')
+            self.logger.warning(f'file {f'{file_name}.json'} not exists')
 
+        # 加载模型参数
         if Path(f'{file_name}.pth').exists():
-            self.model.load_state_dict(torch.load(f'{file_name}.pth'))
-            self.logger.debug(f'load model from {f'{file_name}.pth'}')
+            model_parameters = torch.load(f'{file_name}.pth')
+            self.model.load_state_dict(model_parameters['model_state_dict'])
+            self.optimizer.load_state_dict(model_parameters['optimizer_state_dict'])
+            self.num_epochs = model_parameters['num_epochs']
+            self.loss = model_parameters['loss']
+            self.logger.debug(f'load model parameters from {f'{file_name}.pth'}')
         else:
-            self.logger.error(f'file {f'{file_name}.pth'} not exists')
+            self.logger.warning(f'file {f'{file_name}.pth'} not exists')
 
     def tester(func):
         '''测试装饰器'''
