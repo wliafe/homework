@@ -278,11 +278,12 @@ class MachineLearning:
 
     def trainer(func):
         '''训练装饰器'''
-        def wrapper(self, num_epochs):
+
+        def wrapper(self, *args, num_epochs, **kwargs):
             rlim = num_epochs + self.recorder.max_record_size()  # 计算xlim的右边界
             self.animator = Animator(xlabel='epoch', xlim=[0, rlim + 1], ylim=-0.1)
             self.logger.debug(f'num_epochs is {num_epochs}')
-            func(self, num_epochs)
+            func(self, *args, num_epochs, **kwargs)
             self.animator.save(f'{self.file_name}.png')
             self.logger.debug(f'save animation to {self.file_name}.png')
             torch.save(self.model.state_dict(), f'{self.file_name}.pth')
@@ -301,14 +302,16 @@ class MachineLearning:
 
     def tester(func):
         '''测试装饰器'''
-        def wrapper(self):
+
+        def wrapper(self, *args, **kwargs):
             self.model.eval()  # 验证模式
-            func(self)
+            func(self, *args, **kwargs)
         return wrapper
 
     def predictor(func):
         '''预测装饰器'''
-        def wrapper(self):
+
+        def wrapper(self, *args, **kwargs):
             self.model.eval()  # 验证模式
-            func(self)
+            func(self, *args, **kwargs)
         return wrapper
