@@ -46,7 +46,13 @@ homework
     ```
 4.  python>=3.8
 5.  安装[pytorch](https://pytorch.ac.cn/get-started/previous-versions/#v210)
-6.  安装jupyter panda matplotlib
+6.  安装 jupyter pandas matplotlib
+    ```bash
+    conda install jupyter
+    ```
+    ```bash
+    pip install pandas matplotlib
+    ```
 
 #### 使用说明
 
