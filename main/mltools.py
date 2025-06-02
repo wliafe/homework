@@ -249,10 +249,10 @@ class Timer:
 # 机器学习是类，用于训练模型
 # 机器学习的返回值是机器学习对象
 # 机器学习的参数是模型、训练集、验证集、测试集、设备
-class MachineLearning:
+class BaseMachineLearning:
     '''机器学习'''
 
-    def __init__(self, train_iter, val_iter, test_iter, *, model, loss, optimizer, recorder_num=3, legend=None, device=torch.device('cpu'), **kwargs):
+    def __init__(self, *, device=torch.device('cpu'), **kwargs):
         '''初始化函数'''
         # 定义时间字符串和文件名
         self.time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -280,6 +280,21 @@ class MachineLearning:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
+        self.device = device  # 定义设备
+        self.logger.debug(f'device is {self.device}')
+
+        # 设置其他参数
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+class MachineLearning(BaseMachineLearning):
+    '''机器学习'''
+
+    def __init__(self, train_iter, val_iter, test_iter, *, model, loss, optimizer, recorder_num=3, legend=None, device=None, **kwargs):
+        '''初始化函数'''
+        BaseMachineLearning.__init__(self, device=device, **kwargs)
+
         # 设置训练集、验证集、测试集
         self.train_iter = train_iter
         self.val_iter = val_iter if val_iter else self.train_iter
@@ -296,13 +311,6 @@ class MachineLearning:
         self.logger.debug(f'optimizer is {self.optimizer.__class__.__name__}, learning rate is {self.optimizer.param_groups[0]["lr"]}')
 
         self.legend = legend   # 定义动画标签
-
-        self.device = device  # 定义设备
-        self.logger.debug(f'device is {self.device}')
-
-        # 设置其他参数
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
         self.num_epochs = 0  # 定义总迭代次数
 
