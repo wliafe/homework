@@ -196,21 +196,19 @@ class Recorder:
 
     def save(self, path):
         '''保存到json文件'''
+        try:
+            with open(path, 'r') as file:
+                data = json.load(file)
+        except FileNotFoundError:
+            data = {}
         with open(path, 'w') as f:
-            json.dump(self.to_dict(), f)
-
-    def to_dict(self):
-        '''返回字典'''
-        return {str(i): item for i, item in enumerate(self.data)}
+            data['record'] = self.data
+            json.dump(data, f, indent=4)
 
     def load(self, path):
         '''从json文件导入'''
         with open(path, 'r') as f:
-            self.from_dict(json.load(f))
-
-    def from_dict(self, dict_data):
-        '''从字典导入'''
-        self.data = [item for item in dict_data.values()]
+            self.data = json.load(f)['record']
 
 
 # Timer 计时器
@@ -243,6 +241,22 @@ class Timer:
     def sum(self):
         '''返回时间总和'''
         return sum(self.times)
+
+    def save(self, path):
+        '''保存到json文件'''
+        try:
+            with open(path, 'r') as file:
+                data = json.load(file)
+        except FileNotFoundError:
+            data = {}
+        with open(path, 'w') as f:
+            data['time'] = self.times
+            json.dump(data, f, indent=4)
+
+    def load(self, path):
+        '''从json文件导入'''
+        with open(path, 'r') as f:
+            self.times = json.load(f)['time']
 
 
 # MachineLearning 机器学习
@@ -345,6 +359,10 @@ class MachineLearning(BaseMachineLearning):
             self.recorder.save(f'{self.file_name}.json')
             self.logger.debug(f'save recorder to {self.file_name}.json')
 
+            # 保存计时器
+            self.timer.save(f'{self.file_name}.json')
+            self.logger.debug(f'save timer to {self.file_name}.json')
+
             # 保存模型参数
             model_parameters = {
                 'num_epochs': self.num_epochs,
@@ -365,6 +383,13 @@ class MachineLearning(BaseMachineLearning):
         if Path(f'{file_name}.json').exists():
             self.recorder.load(f'{file_name}.json')
             self.logger.debug(f'load recorder from {file_name}.josn')
+        else:
+            self.logger.warning(f'file {file_name}.json not exists')
+        
+        # 加载计时器
+        if Path(f'{file_name}.json').exists():
+            self.timer.load(f'{file_name}.json')
+            self.logger.debug(f'load timer from {file_name}.json')
         else:
             self.logger.warning(f'file {file_name}.json not exists')
 
