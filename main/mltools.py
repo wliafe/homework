@@ -12,42 +12,73 @@ from collections import Counter
 from matplotlib import pyplot as plt
 
 
-# vocab 词元表，用于构建词典
-# 词元表是一个字典，键是词元，值是索引
-# 词元表的长度是词典的大小
-# 词元表的索引是词元的索引
-class Vocab:
-    '''词元表'''
+# 分词器
+# 分词器是一个字典，键是词元，值是索引
+# 分词器的长度是词典的大小
+# 分词器的索引是词元的索引
+class Tokenizer:
+    '''分词器'''
 
-    def __init__(self, tokens, min_freq=0, reserved_tokens=None):
+    def __init__(self, datas, min_freq=0):
         '''初始化'''
-        if not reserved_tokens:  # 保留词元
-            reserved_tokens = []
+        tokens = Counter()  # 将文本拆分为词元并统计频率
+        for item in datas:
+            tokens.update(str(item))
         self.unk = 0  # 未知词元索引为0
+        self.cls = 1  # 分类词元索引为1
+        self.sep = 2  # 分隔词元索引为2
+        self.pad = 3  # 填充词元索引为3
         tokens = [item[0] for item in tokens.items() if item[1] > min_freq]  # 删除低频词元
-        self.idx_to_token = ['<unk>'] + reserved_tokens + tokens  # 建立词元列表
+        self.idx_to_token = ['[UNK]', '[CLS]', '[SEP]', '[PAD]'] + tokens  # 建立词元列表
         # 建立词元字典
-        reserved_tokens_dict = {value: index + 1 for index, value in enumerate(reserved_tokens)}
-        tokens_dict = {value: index + 1 + len(reserved_tokens_dict) for index, value in enumerate(tokens)}
-        self.token_to_idx = {'<unk>': 0}
-        self.token_to_idx.update(reserved_tokens_dict)
+        tokens_dict = {value: index + 4 for index, value in enumerate(tokens)}
+        self.token_to_idx = {'[UNK]': 0, '[CLS]': 1, '[SEP]': 2, '[PAD]': 3}
         self.token_to_idx.update(tokens_dict)
+
+    def __call__(self, tokens, max_length=None):
+        return self.encode(tokens, max_length)
 
     def __len__(self):
         '''返回词表大小'''
         return len(self.idx_to_token)
 
-    def __getitem__(self, indices):
+    def decode(self, indices):
         '''根据索引返回词元'''
-        if isinstance(indices, (list, tuple)):
-            return [self.__getitem__(index) for index in indices]
-        return self.idx_to_token[indices]
+        if isinstance(indices, torch.Tensor):
+            if indices.dim() == 0:
+                return []
+            elif indices.dim() == 1:
+                return ''.join([self.idx_to_token[index] for index in indices.tolist()])
+            elif indices.dim() == 2:
+                return [''.join([self.idx_to_token[item] for item in index]) for index in indices.tolist()]
+        else:
+            raise TypeError('indices must be torch.Tensor')
 
-    def to_indices(self, tokens):
+    def encode(self, texts, max_length=None):
         '''根据词元返回索引'''
-        if isinstance(tokens, (list, tuple)):
-            return [self.to_indices(token) for token in tokens]
-        return self.token_to_idx.get(tokens, self.unk)
+        if isinstance(texts, str):
+            if max_length:
+                texts = list(texts)[:max_length] if len(texts) > max_length else list(texts) + ['[PAD]'] * (max_length - len(texts))
+            return torch.tensor([self.token_to_idx.get(token, self.unk) for token in texts])
+        elif isinstance(texts, (list, tuple)):
+            if not max_length:
+                max_length = max([len(text) for text in texts])
+            return torch.stack([self.encode(text, max_length) for text in texts])
+        else:
+            raise TypeError(f'texts: {texts}\nThe type of texts is {type(texts)}, while texts must be of type str, tuple[str] or list[str]')
+
+
+# 自定义数据集
+class MyDataset(data.Dataset):
+    def __init__(self, datas):
+        data.Dataset.__init__(self)
+        self.data = datas
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
 
 
 # load_data 多个数据集加载器
@@ -76,26 +107,16 @@ def mnist(path, *, batch_size=100, download=False):
     return _iter_data([train_data, val_data, test_data], batch_size)  # 返回数据迭代器
 
 
-def chn_senti_corp(path, *, batch_size=100, step_size=200):
+def chn_senti_corp(path, *, batch_size=100):
     '''加载数据集ChnSentiCorp, 返回词表和训练集、验证集、测试集迭代器'''
     # 数据集下载地址 https://raw.githubusercontent.com/SophonPlus/ChineseNlpCorpus/refs/heads/master/datasets/ChnSentiCorp_htl_all/ChnSentiCorp_htl_all.csv
     chn_senti_corp = pd.read_csv(path)  # 读数据集
-
-    token_count = Counter()  # 将文本拆分为词元并统计频率
-    for item in chn_senti_corp.iloc[:, 1].values:
-        token_count.update(str(item))
-
-    vocab = Vocab(token_count, min_freq=10, reserved_tokens=['<pad>'])  # 建立词表
-
-    # 加载并划分数据集
-    chn_senti_corp_feature = [vocab.to_indices(list(str(item))[:step_size]) for item in chn_senti_corp.iloc[:, 1].values]  # 读取评论转为数字列表，评论限制在200字内
-    chn_senti_corp_feature = torch.tensor([item + [1] * (step_size - len(item)) for item in chn_senti_corp_feature])  # 将列表转为tensor，同时空内容用<pad>填充
-    chn_senti_corp_label = torch.tensor(chn_senti_corp.iloc[:, 0].values)  # 将标签转为tensor
-    chn_senti_corp_data = data.TensorDataset(chn_senti_corp_feature, chn_senti_corp_label)  # 生成Dataset
+    chn_senti_corp_data = [(str(item.review), item.label) for item in chn_senti_corp.itertuples()]
+    chn_senti_corp_data = MyDataset(chn_senti_corp_data)  # 生成Dataset
     train_data, val_data, test_data = _split_data(chn_senti_corp_data, [0.7, 0.15, 0.15])  # 划分训练集、验证集、测试集
     train_iter, val_iter, test_iter = _iter_data([train_data, val_data, test_data], batch_size)  # 产生迭代器
-
-    return train_iter, val_iter, test_iter, vocab  # 返回词表和迭代器
+    tokenizer = Tokenizer(chn_senti_corp.iloc[:, 1].values, min_freq=10)  # 建立分词器
+    return train_iter, val_iter, test_iter, tokenizer  # 返回迭代器和分词器
 
 
 # Animator 动画器
@@ -265,15 +286,47 @@ class Timer:
 # 机器学习的参数是模型、训练集、验证集、测试集、设备
 class BaseMachineLearning:
     '''机器学习'''
+    class AutoSave:
+        '''自动保存'''
+
+        def __init__(self, logger):
+            '''初始化'''
+            self.logger = logger  # 日志生成器
+            self.items = []  # 保存项
+            self.file_name = []  # 文件名
+            self.can_load = []  # 能否加载
+
+        def add(self, item, file_name, can_load=True):
+            '''添加'''
+            self.items.append(item)
+            self.file_name.append(file_name)
+            self.can_load.append(can_load)
+
+        def save(self, dir_path):
+            '''保存'''
+            for item, file_name in zip(self.items, self.file_name):
+                item.save(f'{dir_path}/{file_name}')
+                self.logger.debug(f'save {item.__class__.__name__} to {dir_path}/{file_name}')
+
+        def load(self, dir_path):
+            '''加载'''
+            for item, file_name, can_load in zip(self.items, self.file_name, self.can_load):
+                if can_load:
+                    if Path(f'{dir_path}/{file_name}').exists():
+                        item.load(f'{dir_path}/{file_name}')
+                        self.logger.debug(f'load {item.__class__.__name__} from {dir_path}/{file_name}')
+                    else:
+                        self.logger.warning(f'file {dir_path}/{file_name} not exists')
 
     def __init__(self, *, device=torch.device('cpu'), **kwargs):
         '''初始化函数'''
         # 定义时间字符串和文件名
-        self.time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        self.file_name = f'../results/{self.time_str}-{self.__class__.__name__}/{self.__class__.__name__}'
+        time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        self.dir_path = f'../results/{time_str}-{self.__class__.__name__}'
+        self.file_name = f'{self.__class__.__name__}'
 
         # 创建目录
-        for path in [f'../results', f'../results/{self.time_str}-{self.__class__.__name__}']:
+        for path in [f'../results', self.dir_path]:
             if not Path(path).exists():
                 Path(path).mkdir()
 
@@ -281,7 +334,7 @@ class BaseMachineLearning:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
         # 创建文件处理器
-        file_handler = logging.FileHandler(f'{self.file_name}.log')
+        file_handler = logging.FileHandler(f'{self.dir_path}/{self.file_name}.log')
         file_handler.setLevel(logging.DEBUG)
         # 创建控制台处理器
         console_handler = logging.StreamHandler()
@@ -296,6 +349,9 @@ class BaseMachineLearning:
 
         self.device = device  # 定义设备
         self.logger.debug(f'device is {self.device}')
+
+        # 定义自动保存
+        self.auto_save = self.AutoSave(self.logger)
 
         # 设置其他参数
         for key, value in kwargs.items():
@@ -329,7 +385,9 @@ class MachineLearning(BaseMachineLearning):
         self.num_epochs = 0  # 定义总迭代次数
 
         self.timer = Timer()  # 设置计时器
+        self.auto_save.add(self.timer, f'{self.file_name}.json')  # 自动保存计时器
         self.recorder = Recorder(recorder_num)  # 设置记录器
+        self.auto_save.add(self.recorder, f'{self.file_name}.json')  # 自动保存记录器
 
     def trainer(func):
         '''训练装饰器'''
@@ -340,6 +398,7 @@ class MachineLearning(BaseMachineLearning):
 
             # 初始化动画器
             self.animator = Animator(xlabel='epoch', xlim=[0, self.num_epochs + 1], ylim=-0.1, legend=self.legend)
+            self.auto_save.add(self.animator, f'{self.file_name}.png', can_load=False)  # 自动保存动画
             self.animator.show(self.recorder.data)
 
             # 根据迭代次数产生日志
@@ -351,17 +410,8 @@ class MachineLearning(BaseMachineLearning):
             # 开始训练
             func(self, *args, num_epoch, **kwargs)
 
-            # 保存动画
-            self.animator.save(f'{self.file_name}.png')
-            self.logger.debug(f'save animation to {self.file_name}.png')
-
-            # 保存记录
-            self.recorder.save(f'{self.file_name}.json')
-            self.logger.debug(f'save recorder to {self.file_name}.json')
-
-            # 保存计时器
-            self.timer.save(f'{self.file_name}.json')
-            self.logger.debug(f'save timer to {self.file_name}.json')
+            # 自动保存
+            self.auto_save.save(self.dir_path)
 
             # 保存模型参数
             model_parameters = {
@@ -370,39 +420,27 @@ class MachineLearning(BaseMachineLearning):
                 'optimizer_state_dict': self.optimizer.state_dict(),
                 'loss': self.loss,
             }
-            torch.save(model_parameters, f'{self.file_name}.pth')
-            self.logger.debug(f'save model parameters to {self.file_name}.pth')
+            torch.save(model_parameters, f'{self.dir_path}/{self.file_name}.pth')
+            self.logger.debug(f'save model parameters to {self.dir_path}/{self.file_name}.pth')
         return wrapper
 
-    def load(self, time_str=None):
+    def load(self, dir_name=None):
         '''加载模型'''
-        time_str = time_str if time_str else self.time_str
-        file_name = f'../results/{time_str}-{self.__class__.__name__}/{self.__class__.__name__}'
+        dir_path = f'../results/{dir_name}' if dir_name else self.dir_path
 
-        # 加载记录
-        if Path(f'{file_name}.json').exists():
-            self.recorder.load(f'{file_name}.json')
-            self.logger.debug(f'load recorder from {file_name}.josn')
-        else:
-            self.logger.warning(f'file {file_name}.json not exists')
-        
-        # 加载计时器
-        if Path(f'{file_name}.json').exists():
-            self.timer.load(f'{file_name}.json')
-            self.logger.debug(f'load timer from {file_name}.json')
-        else:
-            self.logger.warning(f'file {file_name}.json not exists')
+        # 加载自动保存
+        self.auto_save.load(dir_path)
 
         # 加载模型参数
-        if Path(f'{file_name}.pth').exists():
-            model_parameters = torch.load(f'{file_name}.pth', weights_only=False)
+        if Path(f'{dir_path}/{self.file_name}.pth').exists():
+            model_parameters = torch.load(f'{dir_path}/{self.file_name}.pth', weights_only=False)
             self.model.load_state_dict(model_parameters['model_state_dict'])
             self.optimizer.load_state_dict(model_parameters['optimizer_state_dict'])
             self.num_epochs = model_parameters['num_epochs']
             self.loss = model_parameters['loss']
-            self.logger.debug(f'load model parameters from {file_name}.pth')
+            self.logger.debug(f'load model parameters from {dir_path}/{self.file_name}.pth')
         else:
-            self.logger.warning(f'file {file_name}.pth not exists')
+            self.logger.warning(f'file {dir_path}/{self.file_name}.pth not exists')
 
     def tester(func):
         '''测试装饰器'''
