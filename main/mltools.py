@@ -12,11 +12,34 @@ from collections import Counter
 from matplotlib import pyplot as plt
 
 
+# 数据保存器
+# 继承数据保存器类可以获得保存和加载数据到json文件的功能
+class DataSave:
+    def __init__(self, data):
+        self.data = data
+
+    def save(self, path):
+        '''保存数据'''
+        try:
+            with open(path, 'r') as file:
+                data = json.load(file)
+        except FileNotFoundError:
+            data = {}
+        with open(path, 'w') as f:
+            data[self.__class__.__name__] = self.data
+            json.dump(data, f, indent=4)
+
+    def load(self, path):
+        '''从json文件导入'''
+        with open(path, 'r') as f:
+            self.data = json.load(f)[self.__class__.__name__]
+
+
 # 分词器
 # 分词器是一个字典，键是词元，值是索引
 # 分词器的长度是词典的大小
 # 分词器的索引是词元的索引
-class Tokenizer:
+class Tokenizer(DataSave):
     '''分词器'''
 
     def __init__(self, datas, min_freq=0):
@@ -34,6 +57,7 @@ class Tokenizer:
         tokens_dict = {value: index + 4 for index, value in enumerate(tokens)}
         self.token_to_idx = {'[UNK]': 0, '[CLS]': 1, '[SEP]': 2, '[PAD]': 3}
         self.token_to_idx.update(tokens_dict)
+        DataSave.__init__(self, [self.idx_to_token, self.token_to_idx])
 
     def __call__(self, tokens, max_length=None):
         return self.encode(tokens, max_length)
@@ -188,12 +212,13 @@ class Accumulator:
 # 记录器是类，用于记录多个变量
 # 记录器的返回值是记录器对象
 # 记录器的参数是变量个数
-class Recorder:
+class Recorder(DataSave):
     '''n个记录器'''
 
     def __init__(self, n):
         '''初始化'''
         self.data = [[] for _ in range(n)]
+        DataSave.__init__(self, self.data)
 
     def add(self, *args):
         '''添加'''
@@ -215,33 +240,18 @@ class Recorder:
         '''返回第n个记录器'''
         return self.data[idx]
 
-    def save(self, path):
-        '''保存到json文件'''
-        try:
-            with open(path, 'r') as file:
-                data = json.load(file)
-        except FileNotFoundError:
-            data = {}
-        with open(path, 'w') as f:
-            data['record'] = self.data
-            json.dump(data, f, indent=4)
-
-    def load(self, path):
-        '''从json文件导入'''
-        with open(path, 'r') as f:
-            self.data = json.load(f)['record']
-
 
 # Timer 计时器
 # 计时器是类，用于记录多个变量
 # 计时器的返回值是计时器对象
 # 计时器的参数是变量个数
-class Timer:
+class Timer(DataSave):
     '''记录多次运行时间'''
 
     def __init__(self):
         '''初始化'''
         self.times = []
+        DataSave.__init__(self, self.times)
 
     def start(self):
         '''启动计时器'''
@@ -262,22 +272,6 @@ class Timer:
     def sum(self):
         '''返回时间总和'''
         return sum(self.times)
-
-    def save(self, path):
-        '''保存到json文件'''
-        try:
-            with open(path, 'r') as file:
-                data = json.load(file)
-        except FileNotFoundError:
-            data = {}
-        with open(path, 'w') as f:
-            data['time'] = self.times
-            json.dump(data, f, indent=4)
-
-    def load(self, path):
-        '''从json文件导入'''
-        with open(path, 'r') as f:
-            self.times = json.load(f)['time']
 
 
 # MachineLearning 机器学习
