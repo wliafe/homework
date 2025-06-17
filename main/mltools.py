@@ -13,10 +13,24 @@ from matplotlib import pyplot as plt
 
 
 # 数据保存器
-# 继承数据保存器类可以获得保存和加载数据到json文件的功能
+# 定义数据保存器结构
 class DataSave:
+    '''数据保存器'''
+
     def __init__(self, data):
         self.data = data
+
+    def save(self):
+        raise NotImplementedError
+
+    def load(self):
+        raise NotImplementedError
+
+
+# 数据保存器
+# 继承数据保存器类可以获得保存和加载数据到json文件的功能
+class DataSaveToJson(DataSave):
+    '''json数据保存器'''
 
     def save(self, path):
         '''保存数据'''
@@ -39,7 +53,7 @@ class DataSave:
 # 分词器是一个字典，键是词元，值是索引
 # 分词器的长度是词典的大小
 # 分词器的索引是词元的索引
-class Tokenizer(DataSave):
+class Tokenizer(DataSaveToJson):
     '''分词器'''
 
     def __init__(self, datas, min_freq=0):
@@ -212,7 +226,7 @@ class Accumulator:
 # 记录器是类，用于记录多个变量
 # 记录器的返回值是记录器对象
 # 记录器的参数是变量个数
-class Recorder(DataSave):
+class Recorder(DataSaveToJson):
     '''n个记录器'''
 
     def __init__(self, n):
@@ -245,7 +259,7 @@ class Recorder(DataSave):
 # 计时器是类，用于记录多个变量
 # 计时器的返回值是计时器对象
 # 计时器的参数是变量个数
-class Timer(DataSave):
+class Timer(DataSaveToJson):
     '''记录多次运行时间'''
 
     def __init__(self):
