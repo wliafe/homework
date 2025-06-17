@@ -164,16 +164,17 @@ def chn_senti_corp(path, *, batch_size=100):
 class Animator:
     """在动画中绘制数据"""
 
-    def __init__(self, *, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None):
+    def __init__(self, *, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None, fmts=None):
         self.fig, self.axes = plt.subplots()  # 生成画布
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
         self.legend = legend  # 图例
+        self.fmts = fmts if fmts else ('-', 'm--', 'g-.', 'r:')  # 格式
 
     def show(self, Y):
         '''展示动画'''
         X = [list(range(1, len(sublist) + 1)) for sublist in Y]
         self.axes.cla()  # 清除画布
-        for x, y, fmt in zip(X, Y, ('-', 'm--', 'g-.', 'r:')):
+        for x, y, fmt in zip(X, Y, self.fmts):
             self.axes.plot(x, y, fmt)
         self.set_axes()  # 设置axes
         if self.legend:
@@ -369,7 +370,7 @@ class BaseMachineLearning:
 class MachineLearning(BaseMachineLearning):
     '''机器学习'''
 
-    def __init__(self, train_iter, val_iter, test_iter, *, model, loss, optimizer, recorder_num=3, legend=None, device=None, **kwargs):
+    def __init__(self, train_iter, val_iter, test_iter, *, model, loss, optimizer, recorder_num=3, legend=None, fmts=None, device=None, **kwargs):
         '''初始化函数'''
         BaseMachineLearning.__init__(self, device=device, **kwargs)
 
@@ -388,7 +389,8 @@ class MachineLearning(BaseMachineLearning):
         self.optimizer = optimizer  # 设置优化器
         self.logger.debug(f'optimizer is {self.optimizer.__class__.__name__}, learning rate is {self.optimizer.param_groups[0]["lr"]}')
 
-        self.legend = legend   # 定义动画标签
+        self.legend = legend  # 定义动画标签
+        self.fmts = fmts  # 定义动画格式
 
         self.num_epochs = 0  # 定义总迭代次数
 
@@ -405,7 +407,7 @@ class MachineLearning(BaseMachineLearning):
             self.num_epochs = max(self.num_epochs, num_epochs)  # 计算总迭代次数
 
             # 初始化动画器
-            self.animator = Animator(xlabel='epoch', xlim=[0, self.num_epochs + 1], ylim=-0.1, legend=self.legend)
+            self.animator = Animator(xlabel='epoch', xlim=[0, self.num_epochs + 1], ylim=-0.1, legend=self.legend, fmts=self.fmts)
             self.auto_save.add(self.animator, f'{self.file_name}.png', can_load=False)  # 自动保存动画
             self.animator.show(self.recorder.data)
 
