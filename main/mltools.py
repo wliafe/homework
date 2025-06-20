@@ -420,6 +420,9 @@ class MachineLearning(BaseMachineLearning):
             # 开始训练
             func(self, *args, num_epoch, **kwargs)
 
+            if self.timer.sum():
+                self.logger.debug(f'training time is {self.timer.sum() / 60} min or {self.timer.sum() / 3600} hour')
+
             # 自动保存
             self.auto_save.save(self.dir_path)
 
