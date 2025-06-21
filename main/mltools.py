@@ -59,9 +59,9 @@ class Tokenizer(DataSaveToJson):
     def __init__(self, datas, min_freq=0):
         '''
         初始化
-        
+
         datas: list[str] 数据集
-    
+
         min_freq: int 最小词频, 默认值0
         '''
         tokens = Counter()  # 将文本拆分为词元并统计频率
@@ -259,10 +259,6 @@ class Recorder(DataSaveToJson):
         self.data = [[] for _ in range(n)]
         DataSave.__init__(self, self.data)
 
-    def add(self, *args):
-        '''添加'''
-        self.data = [a.append(b) for a, b in zip(self.data, args)]
-
     def get_latest_record(self):
         '''返回最新记录'''
         return (item[-1] for item in self.data)
@@ -329,7 +325,7 @@ class BaseMachineLearning:
             self.file_name = []  # 文件名
             self.can_load = []  # 能否加载
 
-        def add(self, item, file_name, can_load=True):
+        def append(self, item, file_name, can_load=True):
             '''添加'''
             self.items.append(item)
             self.file_name.append(file_name)
@@ -449,9 +445,9 @@ class MachineLearning(BaseMachineLearning):
         self.num_epochs = 0  # 定义总迭代次数
 
         self.timer = Timer()  # 设置计时器
-        self.auto_save.add(self.timer, f'{self.file_name}.json')  # 自动保存计时器
+        self.auto_save.append(self.timer, f'{self.file_name}.json')  # 自动保存计时器
         self.recorder = Recorder(recorder_num)  # 设置记录器
-        self.auto_save.add(self.recorder, f'{self.file_name}.json')  # 自动保存记录器
+        self.auto_save.append(self.recorder, f'{self.file_name}.json')  # 自动保存记录器
 
     def trainer(func):
         '''
@@ -470,7 +466,7 @@ class MachineLearning(BaseMachineLearning):
 
             # 初始化动画器
             self.animator = Animator(xlabel='epoch', xlim=[0, self.num_epochs + 1], ylim=-0.1, legend=self.legend, fmts=self.fmts)
-            self.auto_save.add(self.animator, f'{self.file_name}.png', can_load=False)  # 自动保存动画
+            self.auto_save.append(self.animator, f'{self.file_name}.png', can_load=False)  # 自动保存动画
             self.animator.show(self.recorder.data)
 
             # 根据迭代次数产生日志
