@@ -57,7 +57,13 @@ class Tokenizer(DataSaveToJson):
     '''分词器'''
 
     def __init__(self, datas, min_freq=0):
-        '''初始化'''
+        '''
+        初始化
+        
+        datas: list[str] 数据集
+    
+        min_freq: int 最小词频, 默认值0
+        '''
         tokens = Counter()  # 将文本拆分为词元并统计频率
         for item in datas:
             tokens.update(str(item))
@@ -136,8 +142,18 @@ def _iter_data(datas, batch_size, shuffle=True):
     return (data.DataLoader(_data, batch_size=batch_size, shuffle=shuffle) for _data in datas)
 
 
-def mnist(path, *, batch_size=100, download=False):
-    '''加载数据集MNIST, 返回训练集、验证集、测试集迭代器'''
+def mnist(path='../data', batch_size=100, download=False):
+    '''
+    加载数据集MNIST
+
+    path: 数据集路径, 默认值'../data'
+
+    batch_size: 批量大小, 默认值100
+
+    download: 是否下载数据集, 默认值False
+
+    返回训练集、验证集、测试集迭代器
+    '''
     trans = transforms.ToTensor()  # 数据集格式转换
     train_data = datasets.MNIST(root=path, train=True, transform=trans, download=download)
     test_data = datasets.MNIST(root=path, train=False, transform=trans, download=download)
@@ -145,10 +161,18 @@ def mnist(path, *, batch_size=100, download=False):
     return _iter_data([train_data, val_data, test_data], batch_size)  # 返回数据迭代器
 
 
-def chn_senti_corp(path, *, batch_size=100):
-    '''加载数据集ChnSentiCorp, 返回词表和训练集、验证集、测试集迭代器'''
+def chn_senti_corp(path='../data', batch_size=100):
+    '''
+    加载数据集ChnSentiCorp
+
+    path: 数据集路径, 默认值'../data'
+
+    batch_size: 批量大小, 默认值100
+
+    返回词表和训练集、验证集、测试集迭代器
+    '''
     # 数据集下载地址 https://raw.githubusercontent.com/SophonPlus/ChineseNlpCorpus/refs/heads/master/datasets/ChnSentiCorp_htl_all/ChnSentiCorp_htl_all.csv
-    chn_senti_corp = pd.read_csv(path)  # 读数据集
+    chn_senti_corp = pd.read_csv(f'{path}/ChnSentiCorp_htl_all.csv')  # 读数据集
     chn_senti_corp_data = [(str(item.review), item.label) for item in chn_senti_corp.itertuples()]
     chn_senti_corp_data = MyDataset(chn_senti_corp_data)  # 生成Dataset
     train_data, val_data, test_data = _split_data(chn_senti_corp_data, [0.7, 0.15, 0.15])  # 划分训练集、验证集、测试集
@@ -328,7 +352,13 @@ class BaseMachineLearning:
                         self.logger.warning(f'file {dir_path}/{file_name} not exists')
 
     def __init__(self, *, device=torch.device('cpu'), **kwargs):
-        '''初始化函数'''
+        '''
+        初始化函数
+
+        device: 设备, 默认为cpu
+
+        kwargs: 其他参数，自定义参数自动转化为属性
+        '''
         # 定义时间字符串和文件名
         time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.dir_path = f'../results/{time_str}-{self.__class__.__name__}'
@@ -371,7 +401,31 @@ class MachineLearning(BaseMachineLearning):
     '''机器学习'''
 
     def __init__(self, train_iter, val_iter, test_iter, *, model, loss, optimizer, recorder_num=3, legend=None, fmts=None, device=None, **kwargs):
-        '''初始化函数'''
+        '''
+        初始化函数
+
+        train_iter: torch.utils.data.DataLoader 训练集
+
+        val_iter: torch.utils.data.DataLoader 验证集
+
+        test_iter: torch.utils.data.DataLoader 测试集
+
+        model: 模型
+
+        loss: 损失函数
+
+        optimizer: 优化器
+
+        recorder_num: 记录器数量, 默认为3
+
+        legend: 动画标签, 默认为空
+
+        fmts: 动画格式, 默认为空
+
+        device: 设备, 默认为cpu
+
+        kwargs: 其他参数，自定义参数自动转化为属性
+        '''
         BaseMachineLearning.__init__(self, device=device, **kwargs)
 
         # 设置训练集、验证集、测试集
@@ -400,7 +454,15 @@ class MachineLearning(BaseMachineLearning):
         self.auto_save.add(self.recorder, f'{self.file_name}.json')  # 自动保存记录器
 
     def trainer(func):
-        '''训练装饰器'''
+        '''
+        训练装饰器
+
+        args: 训练函数的参数
+
+        num_epochs: 迭代次数
+
+        kwargs: 其他参数
+        '''
 
         def wrapper(self, *args, num_epochs, **kwargs):
             num_epoch = num_epochs - self.num_epochs if num_epochs > self.num_epochs else 0  # 计算迭代次数
@@ -438,7 +500,11 @@ class MachineLearning(BaseMachineLearning):
         return wrapper
 
     def load(self, dir_name=None):
-        '''加载模型'''
+        '''
+        加载模型
+
+        dir_name: 模型保存文件名, 默认为最新文件名
+        '''
         dir_path = f'../results/{dir_name}' if dir_name else self.dir_path
 
         # 加载自动保存
@@ -456,7 +522,13 @@ class MachineLearning(BaseMachineLearning):
             self.logger.warning(f'file {dir_path}/{self.file_name}.pth not exists')
 
     def tester(func):
-        '''测试装饰器'''
+        '''
+        测试装饰器
+
+        args: 测试函数的参数
+
+        kwargs: 其他参数
+        '''
 
         def wrapper(self, *args, **kwargs):
             self.model.eval()  # 验证模式
@@ -464,7 +536,13 @@ class MachineLearning(BaseMachineLearning):
         return wrapper
 
     def predictor(func):
-        '''预测装饰器'''
+        '''
+        预测装饰器
+
+        args: 预测函数的参数
+
+        kwargs: 其他参数
+        '''
 
         def wrapper(self, *args, **kwargs):
             self.model.eval()  # 验证模式
