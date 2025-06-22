@@ -1,10 +1,13 @@
 import torch
 from torch.utils import data
 from torchvision import transforms, datasets
+import re
 import json
 import time
+import httpx
 import logging
 import pandas as pd
+from tqdm import tqdm
 from pathlib import Path
 from IPython import display
 from datetime import datetime
@@ -142,7 +145,23 @@ def _iter_data(datas, batch_size, shuffle=True):
     return (data.DataLoader(_data, batch_size=batch_size, shuffle=shuffle) for _data in datas)
 
 
-def mnist(path='../data', batch_size=100, download=False):
+def download_file(url, save_path):
+    '''文件下载'''
+    file_name = re.search(r'(?<=/)[^/]+$', url).group()  # 从url中提取文件名
+    if not Path(f'{save_path}/{file_name}').exists():  # 如果文件不存在则下载
+        Path(save_path).mkdir(parents=True, exist_ok=True)  # 创建保存路径
+        with httpx.Client() as client:
+            with client.stream('GET', url) as response:
+                response.raise_for_status()  # 检查响应状态码
+                total_size = int(response.headers.get('Content-Length', 0))  # 获取文件大小
+                with open(f'{save_path}/{file_name}', 'wb') as f, tqdm(desc=file_name, total=total_size, unit='B', unit_scale=True, unit_divisor=1024) as pbar:
+                    for chuck in response.iter_bytes():
+                        f.write(chuck)
+                        pbar.update(len(chuck))
+    return file_name
+
+
+def mnist(path='../data', batch_size=100):
     '''
     加载数据集MNIST
 
@@ -154,6 +173,7 @@ def mnist(path='../data', batch_size=100, download=False):
 
     返回训练集、验证集、测试集迭代器
     '''
+    download = False if Path(f'{path}/MNIST').exists() else True
     trans = transforms.ToTensor()  # 数据集格式转换
     train_data = datasets.MNIST(root=path, train=True, transform=trans, download=download)
     test_data = datasets.MNIST(root=path, train=False, transform=trans, download=download)
@@ -171,8 +191,9 @@ def chn_senti_corp(path='../data', batch_size=100):
 
     返回词表和训练集、验证集、测试集迭代器
     '''
-    # 数据集下载地址 https://raw.githubusercontent.com/SophonPlus/ChineseNlpCorpus/refs/heads/master/datasets/ChnSentiCorp_htl_all/ChnSentiCorp_htl_all.csv
-    chn_senti_corp = pd.read_csv(f'{path}/ChnSentiCorp_htl_all.csv')  # 读数据集
+    url = 'https://raw.githubusercontent.com/SophonPlus/ChineseNlpCorpus/refs/heads/master/datasets/ChnSentiCorp_htl_all/ChnSentiCorp_htl_all.csv'
+    file_name = download_file(url, path)
+    chn_senti_corp = pd.read_csv(f'{path}/{file_name}')  # 读数据集
     chn_senti_corp_data = [(str(item.review), item.label) for item in chn_senti_corp.itertuples()]
     chn_senti_corp_data = MyDataset(chn_senti_corp_data)  # 生成Dataset
     train_data, val_data, test_data = _split_data(chn_senti_corp_data, [0.7, 0.15, 0.15])  # 划分训练集、验证集、测试集
@@ -361,9 +382,7 @@ class BaseMachineLearning:
         self.file_name = f'{self.__class__.__name__}'
 
         # 创建目录
-        for path in [f'../results', self.dir_path]:
-            if not Path(path).exists():
-                Path(path).mkdir()
+        Path(self.dir_path).mkdir(parents=True, exist_ok=True)
 
         # 设置日志
         self.logger = logging.getLogger()
