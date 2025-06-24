@@ -500,19 +500,26 @@ class MachineLearning(BaseMachineLearning):
             if self.timer.sum():
                 self.logger.debug(f'training time is {self.timer.sum() / 60} min or {self.timer.sum() / 3600} hour')
 
-            # 自动保存
-            self.auto_save.save(self.dir_path)
+            self.save()
 
-            # 保存模型参数
-            model_parameters = {
-                'num_epochs': self.num_epochs,
-                'model_state_dict': self.model.state_dict(),
-                'optimizer_state_dict': self.optimizer.state_dict(),
-                'loss': self.loss,
-            }
-            torch.save(model_parameters, f'{self.dir_path}/{self.file_name}.pth')
-            self.logger.debug(f'save model parameters to {self.dir_path}/{self.file_name}.pth')
         return wrapper
+
+    def save(self):
+        '''
+        保存模型
+        '''
+        # 自动保存
+        self.auto_save.save(self.dir_path)
+
+        # 保存模型参数
+        model_parameters = {
+            'num_epochs': self.num_epochs,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'loss': self.loss,
+        }
+        torch.save(model_parameters, f'{self.dir_path}/{self.file_name}.pth')
+        self.logger.debug(f'save model parameters to {self.dir_path}/{self.file_name}.pth')
 
     def load(self, dir_name=None):
         '''
