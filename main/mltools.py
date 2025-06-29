@@ -16,26 +16,11 @@ from matplotlib import pyplot as plt
 
 
 # 数据保存器
-# 定义数据保存器结构
-class DataSave:
-    '''数据保存器'''
-
-    def __init__(self, data):
-        self.data = data
-
-    def save(self):
-        raise NotImplementedError
-
-    def load(self):
-        raise NotImplementedError
-
-
-# 数据保存器
 # 继承数据保存器类可以获得保存和加载数据到json文件的功能
-class DataSaveToJson(DataSave):
+class DataSaveToJson:
     '''json数据保存器'''
 
-    def save(self, path):
+    def save_data(path, label, datas):
         '''保存数据'''
         try:
             with open(path, 'r') as file:
@@ -43,20 +28,20 @@ class DataSaveToJson(DataSave):
         except FileNotFoundError:
             data = {}
         with open(path, 'w') as f:
-            data[self.__class__.__name__] = self.data
+            data[label] = datas
             json.dump(data, f, indent=4)
 
-    def load(self, path):
+    def load_data(path, label):
         '''从json文件导入'''
-        with open(path, 'r') as f:
-            self.data = json.load(f)[self.__class__.__name__]
+        with open(path, 'r') as file:
+            return json.load(file)[label]
 
 
 # 分词器
 # 分词器是一个字典，键是词元，值是索引
 # 分词器的长度是词典的大小
 # 分词器的索引是词元的索引
-class Tokenizer(DataSaveToJson):
+class Tokenizer:
     '''分词器'''
 
     def __init__(self, datas, min_freq=0):
@@ -80,7 +65,6 @@ class Tokenizer(DataSaveToJson):
         tokens_dict = {value: index + 4 for index, value in enumerate(tokens)}
         self.token_to_idx = {'[UNK]': 0, '[CLS]': 1, '[SEP]': 2, '[PAD]': 3}
         self.token_to_idx.update(tokens_dict)
-        DataSave.__init__(self, [self.idx_to_token, self.token_to_idx])
 
     def __call__(self, tokens, max_length=None):
         return self.encode(tokens, max_length)
@@ -114,6 +98,14 @@ class Tokenizer(DataSaveToJson):
         else:
             raise TypeError(f'texts: {texts}\nThe type of texts is {type(texts)}, while texts must be of type str, tuple[str] or list[str]')
 
+    def save(self, path, label='tokenizer'):
+        '''保存数据'''
+        DataSaveToJson.save_data(path, label, [self.idx_to_token, self.token_to_idx])
+
+    def load(self, path, label='tokenizer'):
+        '''加载数据'''
+        self.idx_to_token, self.token_to_idx = DataSaveToJson.load_data(path, label)
+
 
 # 自定义数据集
 class MyDataset(data.Dataset):
@@ -132,7 +124,7 @@ class MyDataset(data.Dataset):
 # 数据集加载器是函数，用于加载数据集
 # 数据集加载器的返回值是训练集、验证集、测试集的迭代器
 # 数据集加载器的参数是数据集的路径、批量大小、是否下载数据集
-def _split_data(datas, ratio):
+def split_data(datas, ratio):
     '''将数据按比例随机分割'''
     ratio = [r / sum(ratio) for r in ratio]
     nums = [int(len(datas) * r) for r in ratio]
@@ -140,7 +132,7 @@ def _split_data(datas, ratio):
     return data.random_split(datas, nums)
 
 
-def _iter_data(datas, batch_size, shuffle=True):
+def iter_data(datas, batch_size, shuffle=True):
     '''将批量数据转换为迭代器'''
     return (data.DataLoader(_data, batch_size=batch_size, shuffle=shuffle) for _data in datas)
 
@@ -177,8 +169,8 @@ def mnist(path='../data', batch_size=100):
     trans = transforms.ToTensor()  # 数据集格式转换
     train_data = datasets.MNIST(root=path, train=True, transform=trans, download=download)
     test_data = datasets.MNIST(root=path, train=False, transform=trans, download=download)
-    train_data, val_data = _split_data(train_data, [9, 1])  # 训练集和验证集比例9：1
-    return _iter_data([train_data, val_data, test_data], batch_size)  # 返回数据迭代器
+    train_data, val_data = split_data(train_data, [9, 1])  # 训练集和验证集比例9：1
+    return iter_data([train_data, val_data, test_data], batch_size)  # 返回数据迭代器
 
 
 def chn_senti_corp(path='../data', batch_size=100):
@@ -196,8 +188,8 @@ def chn_senti_corp(path='../data', batch_size=100):
     chn_senti_corp = pd.read_csv(f'{path}/{file_name}')  # 读数据集
     chn_senti_corp_data = [(str(item.review), item.label) for item in chn_senti_corp.itertuples()]
     chn_senti_corp_data = MyDataset(chn_senti_corp_data)  # 生成Dataset
-    train_data, val_data, test_data = _split_data(chn_senti_corp_data, [0.7, 0.15, 0.15])  # 划分训练集、验证集、测试集
-    train_iter, val_iter, test_iter = _iter_data([train_data, val_data, test_data], batch_size)  # 产生迭代器
+    train_data, val_data, test_data = split_data(chn_senti_corp_data, [0.7, 0.15, 0.15])  # 划分训练集、验证集、测试集
+    train_iter, val_iter, test_iter = iter_data([train_data, val_data, test_data], batch_size)  # 产生迭代器
     tokenizer = Tokenizer(chn_senti_corp.iloc[:, 1].values, min_freq=10)  # 建立分词器
     return train_iter, val_iter, test_iter, tokenizer  # 返回迭代器和分词器
 
@@ -272,13 +264,12 @@ class Accumulator:
 # 记录器是类，用于记录多个变量
 # 记录器的返回值是记录器对象
 # 记录器的参数是变量个数
-class Recorder(DataSaveToJson):
+class Recorder:
     '''n个记录器'''
 
     def __init__(self, n):
         '''初始化'''
         self.data = [[] for _ in range(n)]
-        DataSave.__init__(self, self.data)
 
     def get_latest_record(self):
         '''返回最新记录'''
@@ -296,18 +287,25 @@ class Recorder(DataSaveToJson):
         '''返回第n个记录器'''
         return self.data[idx]
 
+    def save(self, path, label='recorder'):
+        '''保存数据'''
+        DataSaveToJson.save_data(path, label, self.data)
+
+    def load(self, path, label='recorder'):
+        '''加载数据'''
+        self.data = DataSaveToJson.load_data(path, label)
+
 
 # Timer 计时器
 # 计时器是类，用于记录多个变量
 # 计时器的返回值是计时器对象
 # 计时器的参数是变量个数
-class Timer(DataSaveToJson):
+class Timer:
     '''记录多次运行时间'''
 
     def __init__(self):
         '''初始化'''
         self.times = []
-        DataSave.__init__(self, self.times)
 
     def start(self):
         '''启动计时器'''
@@ -328,6 +326,14 @@ class Timer(DataSaveToJson):
     def sum(self):
         '''返回时间总和'''
         return sum(self.times)
+
+    def save(self, path, label='timer'):
+        '''保存数据'''
+        DataSaveToJson.save_data(path, label, self.times)
+
+    def load(self, path, label='timer'):
+        '''加载数据'''
+        self.times = DataSaveToJson.load_data(path, label)
 
 
 # MachineLearning 机器学习
@@ -362,11 +368,8 @@ class BaseMachineLearning:
             '''加载'''
             for item, file_name, can_load in zip(self.items, self.file_name, self.can_load):
                 if can_load:
-                    if Path(f'{dir_path}/{file_name}').exists():
-                        item.load(f'{dir_path}/{file_name}')
-                        self.logger.debug(f'load {item.__class__.__name__} from {dir_path}/{file_name}')
-                    else:
-                        self.logger.warning(f'file {dir_path}/{file_name} not exists')
+                    item.load(f'{dir_path}/{file_name}')
+                    self.logger.debug(f'load {item.__class__.__name__} from {dir_path}/{file_name}')
 
     def __init__(self, *, device=torch.device('cpu'), **kwargs):
         '''
@@ -490,15 +493,16 @@ class MachineLearning(BaseMachineLearning):
 
             # 根据迭代次数产生日志
             if num_epoch:
-                self.logger.debug(f'trained {num_epoch} times')
+                self.logger.debug(f'trained {num_epoch} epochs')
             else:
                 self.logger.warning(f'num_epochs is {num_epochs}, but it is less than {self.num_epochs}, so it will not be trained')
 
             # 开始训练
             func(self, *args, num_epoch, **kwargs)
 
+            self.logger.debug(f'total training epochs {self.num_epochs}')
             if self.timer.sum():
-                self.logger.debug(f'training time is {self.timer.sum() / 60} min or {self.timer.sum() / 3600} hour')
+                self.logger.debug(f'total training time {time.strftime("%H:%M:%S", time.gmtime(self.timer.sum()))}')
 
             self.save()
 
@@ -508,18 +512,16 @@ class MachineLearning(BaseMachineLearning):
         '''
         保存模型
         '''
+        # 保存总迭代次数
+        DataSaveToJson.save_data(f'{self.dir_path}/{self.file_name}.json', 'num_epochs', self.num_epochs)
+        self.logger.debug(f'save num_epochs to {self.dir_path}/{self.file_name}.json')
+
         # 自动保存
         self.auto_save.save(self.dir_path)
 
         # 保存模型参数
-        model_parameters = {
-            'num_epochs': self.num_epochs,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'loss': self.loss,
-        }
-        torch.save(model_parameters, f'{self.dir_path}/{self.file_name}.pth')
-        self.logger.debug(f'save model parameters to {self.dir_path}/{self.file_name}.pth')
+        torch.save(self.model.state_dict(), f'{self.dir_path}/{self.file_name}.pth')
+        self.logger.debug(f'save model to {self.dir_path}/{self.file_name}.pth')
 
     def load(self, dir_name=None):
         '''
@@ -529,19 +531,16 @@ class MachineLearning(BaseMachineLearning):
         '''
         dir_path = f'../results/{dir_name}' if dir_name else self.dir_path
 
+        # 加载总迭代次数
+        self.num_epochs = DataSaveToJson.load_data(f'{dir_path}/{self.file_name}.json', 'num_epochs')
+        self.logger.debug(f'load num_epochs from {dir_path}/{self.file_name}.json')
+
         # 加载自动保存
         self.auto_save.load(dir_path)
 
         # 加载模型参数
-        if Path(f'{dir_path}/{self.file_name}.pth').exists():
-            model_parameters = torch.load(f'{dir_path}/{self.file_name}.pth', weights_only=False)
-            self.model.load_state_dict(model_parameters['model_state_dict'])
-            self.optimizer.load_state_dict(model_parameters['optimizer_state_dict'])
-            self.num_epochs = model_parameters['num_epochs']
-            self.loss = model_parameters['loss']
-            self.logger.debug(f'load model parameters from {dir_path}/{self.file_name}.pth')
-        else:
-            self.logger.warning(f'file {dir_path}/{self.file_name}.pth not exists')
+        self.model.load_state_dict(torch.load(f'{dir_path}/{self.file_name}.pth'))
+        self.logger.debug(f'load model parameters from {dir_path}/{self.file_name}.pth')
 
     def tester(func):
         '''
