@@ -407,7 +407,7 @@ class SupervisedLearning(MachineLearning):
 
         kwargs: 其他参数，自定义参数自动转化为属性
         '''
-        SupervisedLearning.__init__(self, device=device, **kwargs)
+        MachineLearning.__init__(self, device=device, **kwargs)
 
         model.to(device)
         self.model = model  # 设置模型
