@@ -342,34 +342,6 @@ class Timer:
 # 机器学习的参数是模型、训练集、验证集、测试集、设备
 class MachineLearning:
     '''机器学习'''
-    class AutoSave:
-        '''自动保存'''
-
-        def __init__(self, logger):
-            '''初始化'''
-            self.logger = logger  # 日志生成器
-            self.items = []  # 保存项
-            self.file_name = []  # 文件名
-            self.can_load = []  # 能否加载
-
-        def append(self, item, file_name, can_load=True):
-            '''添加'''
-            self.items.append(item)
-            self.file_name.append(file_name)
-            self.can_load.append(can_load)
-
-        def save(self, dir_path):
-            '''保存'''
-            for item, file_name in zip(self.items, self.file_name):
-                item.save(f'{dir_path}/{file_name}')
-                self.logger.debug(f'save {item.__class__.__name__} to {dir_path}/{file_name}')
-
-        def load(self, dir_path):
-            '''加载'''
-            for item, file_name, can_load in zip(self.items, self.file_name, self.can_load):
-                if can_load:
-                    item.load(f'{dir_path}/{file_name}')
-                    self.logger.debug(f'load {item.__class__.__name__} from {dir_path}/{file_name}')
 
     def __init__(self, *, device=torch.device('cpu'), **kwargs):
         '''
@@ -407,9 +379,6 @@ class MachineLearning:
         self.device = device  # 定义设备
         self.logger.debug(f'device is {self.device}')
 
-        # 定义自动保存
-        self.auto_save = self.AutoSave(self.logger)
-
         # 设置其他参数
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -443,10 +412,8 @@ class SupervisedLearning(MachineLearning):
         model.to(device)
         self.model = model  # 设置模型
         self.logger.debug(f'model is {self.model}')
-
         self.loss = loss  # 设置损失函数
         self.logger.debug(f'loss function is {self.loss.__class__.__name__}')
-
         self.optimizer = optimizer  # 设置优化器
         self.logger.debug(f'optimizer is {self.optimizer.__class__.__name__}, learning rate is {self.optimizer.param_groups[0]["lr"]}')
 
@@ -456,9 +423,7 @@ class SupervisedLearning(MachineLearning):
         self.num_epochs = 0  # 定义总迭代次数
 
         self.timer = Timer()  # 设置计时器
-        self.auto_save.append(self.timer, f'{self.file_name}.json')  # 自动保存计时器
         self.recorder = Recorder(recorder_num)  # 设置记录器
-        self.auto_save.append(self.recorder, f'{self.file_name}.json')  # 自动保存记录器
 
     def trainer(func):
         '''
@@ -477,7 +442,6 @@ class SupervisedLearning(MachineLearning):
 
             # 初始化动画器
             self.animator = Animator(xlabel='epoch', xlim=[0, self.num_epochs + 1], ylim=-0.1, legend=self.legend, fmts=self.fmts)
-            self.auto_save.append(self.animator, f'{self.file_name}.png', can_load=False)  # 自动保存动画
             self.animator.show(self.recorder.data)
 
             # 根据迭代次数产生日志
@@ -504,10 +468,15 @@ class SupervisedLearning(MachineLearning):
         # 保存总迭代次数
         DataSaveToJson.save_data(f'{self.dir_path}/{self.file_name}.json', 'num_epochs', self.num_epochs)
         self.logger.debug(f'save num_epochs to {self.dir_path}/{self.file_name}.json')
-
-        # 自动保存
-        self.auto_save.save(self.dir_path)
-
+        # 保存计时器
+        self.timer.save(f'{self.dir_path}/{self.file_name}.json')
+        self.logger.debug(f'save timer to {self.dir_path}/{self.file_name}.json')
+        # 保存记录器
+        self.recorder.save(f'{self.dir_path}/{self.file_name}.json')
+        self.logger.debug(f'save recorder to {self.dir_path}/{self.file_name}.json')
+        # 保存动画器
+        self.animator.save(f'{self.dir_path}/{self.file_name}.png')
+        self.logger.debug(f'save animator to {self.dir_path}/{self.file_name}.png')
         # 保存模型参数
         torch.save(self.model.state_dict(), f'{self.dir_path}/{self.file_name}.pth')
         self.logger.debug(f'save model to {self.dir_path}/{self.file_name}.pth')
@@ -523,10 +492,12 @@ class SupervisedLearning(MachineLearning):
         # 加载总迭代次数
         self.num_epochs = DataSaveToJson.load_data(f'{dir_path}/{self.file_name}.json', 'num_epochs')
         self.logger.debug(f'load num_epochs from {dir_path}/{self.file_name}.json')
-
-        # 加载自动保存
-        self.auto_save.load(dir_path)
-
+        # 加载计时器
+        self.timer.load(f'{dir_path}/{self.file_name}.json')
+        self.logger.debug(f'load timer from {dir_path}/{self.file_name}.json')
+        # 加载记录器
+        self.recorder.load(f'{dir_path}/{self.file_name}.json')
+        self.logger.debug(f'load recorder from {dir_path}/{self.file_name}.json')
         # 加载模型参数
         self.model.load_state_dict(torch.load(f'{dir_path}/{self.file_name}.pth'))
         self.logger.debug(f'load model parameters from {dir_path}/{self.file_name}.pth')
