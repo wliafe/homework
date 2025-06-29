@@ -340,7 +340,7 @@ class Timer:
 # 机器学习是类，用于训练模型
 # 机器学习的返回值是机器学习对象
 # 机器学习的参数是模型、训练集、验证集、测试集、设备
-class BaseMachineLearning:
+class MachineLearning:
     '''机器学习'''
     class AutoSave:
         '''自动保存'''
@@ -415,18 +415,12 @@ class BaseMachineLearning:
             setattr(self, key, value)
 
 
-class MachineLearning(BaseMachineLearning):
+class SupervisedLearning(MachineLearning):
     '''机器学习'''
 
-    def __init__(self, train_iter, val_iter, test_iter, *, model, loss, optimizer, recorder_num=3, legend=None, fmts=None, device=None, **kwargs):
+    def __init__(self, *, model, loss, optimizer, recorder_num=3, legend=['train loss', 'val loss', 'val acc'], fmts=None, device=torch.device('cuda'), **kwargs):
         '''
         初始化函数
-
-        train_iter: torch.utils.data.DataLoader 训练集
-
-        val_iter: torch.utils.data.DataLoader 验证集
-
-        test_iter: torch.utils.data.DataLoader 测试集
 
         model: 模型
 
@@ -444,12 +438,7 @@ class MachineLearning(BaseMachineLearning):
 
         kwargs: 其他参数，自定义参数自动转化为属性
         '''
-        BaseMachineLearning.__init__(self, device=device, **kwargs)
-
-        # 设置训练集、验证集、测试集
-        self.train_iter = train_iter
-        self.val_iter = val_iter if val_iter else self.train_iter
-        self.test_iter = test_iter if test_iter else self.val_iter
+        SupervisedLearning.__init__(self, device=device, **kwargs)
 
         model.to(device)
         self.model = model  # 设置模型
