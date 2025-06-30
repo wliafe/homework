@@ -472,7 +472,11 @@ class MachineLearning:
         self.data_manager.load(dir_path)
 
     def create_epoch(self, label='num_epochs'):
-        '''创建Epoch参数'''
+        '''
+        创建Epoch参数
+        
+        label: Epoch的标签, 建议和被赋值变量名相同
+        '''
         epoch = Epoch(self)
 
         def save(dir_path):
@@ -489,7 +493,11 @@ class MachineLearning:
         return epoch
 
     def create_timer(self, label='timer'):
-        '''创建计时器'''
+        '''
+        创建计时器
+        
+        label: 计时器的标签, 建议和被赋值变量名相同
+        '''
         timer = Timer()
 
         def save(dir_path):
@@ -506,7 +514,13 @@ class MachineLearning:
         return timer
 
     def create_recorder(self, recorder_num, label='recorder'):
-        '''创建记录器'''
+        '''
+        创建记录器
+        
+        recorder_num: 记录器的数量
+        
+        label: 记录器的标签, 建议和被赋值变量名相同
+        '''
         recorder = Recorder(recorder_num)
 
         def save(dir_path):
@@ -523,7 +537,23 @@ class MachineLearning:
         return recorder
 
     def create_animator(self, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None, fmts=None, label='animator'):
-        '''创建动画器'''
+        '''
+        创建动画器
+        
+        xlabel: x轴标签
+        
+        ylabel: y轴标签
+        
+        xlim: x轴范围
+        
+        ylim: y轴范围
+        
+        legend: 图例
+        
+        fmts: 格式
+        
+        label: 动画器的标签, 建议和被赋值变量名相同
+        '''
         animator = Animator(xlabel, ylabel, xlim, ylim, legend, fmts)
 
         def save(dir_path):
@@ -535,7 +565,13 @@ class MachineLearning:
         return animator
 
     def add_model(self, model, label='model'):
-        '''添加模型保存'''
+        '''
+        添加模型
+        
+        model: 模型
+        
+        label: 模型的标签, 建议和模型变量名相同
+        '''
         def save(dir_path):
             torch.save(model.state_dict(), f'{dir_path}/{self.file_name}.pth')
             self.logger.debug(f'save model({label}) to {dir_path}/{self.file_name}.pth')
