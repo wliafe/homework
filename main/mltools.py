@@ -206,6 +206,7 @@ class Animator:
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
         self.legend = legend  # 图例
         self.fmts = fmts if fmts else ('-', 'm--', 'g-.', 'r:')  # 格式
+        plt.close()
 
     def show(self, Y):
         '''展示动画'''
@@ -319,13 +320,13 @@ class Timer:
     def avg(self):
         '''返回平均时间'''
         if self.times:
-            return sum(self.times) / len(self.times)
+            return time.strftime("%H:%M:%S", time.gmtime(sum(self.times) / len(self.times)))
         else:
-            return 0
+            return time.strftime("%H:%M:%S", time.gmtime(0))
 
     def sum(self):
         '''返回时间总和'''
-        return sum(self.times)
+        return time.strftime("%H:%M:%S", time.gmtime(sum(self.times)))
 
     def save(self, path, label='timer'):
         '''保存数据'''
@@ -336,46 +337,85 @@ class Timer:
         self.times = DataSaveToJson.load_data(path, label)
 
 
+# 自动保存加载器
+# 将部分数据的保存和加载整合到一起
+class AutoSaveLoader:
+    '''自动保存加载器'''
+
+    def __init__(self):
+        '''
+        初始化函数
+        '''
+        self.save_func = []  # 保存函数
+        self.load_func = []  # 加载函数
+
+    def add_save_func(self, func):
+        '''添加保存函数'''
+        self.save_func.append(func)
+
+    def save(self, dir_path):
+        '''保存数据'''
+        for func in self.save_func:
+            func(dir_path)
+
+    def add_load_func(self, func):
+        '''添加加载函数'''
+        self.load_func.append(func)
+
+    def load(self, dir_path):
+        '''加载数据'''
+        for func in self.load_func:
+            func(dir_path)
+
+
+# 机器学习Epoch
+# 便于计算、控制训练轮数
+# 便于数据保存和加载
+class Epoch:
+    '''机器学习Epoch'''
+
+    def __init__(self, parent):
+        '''初始化'''
+        self._totol_epoch = 0
+        self.parent = parent
+
+    def __call__(self, num_epochs):
+        '''返回迭代轮数'''
+        num_epoch = num_epochs - self.totol_epoch if num_epochs > self.totol_epoch else 0  # 计算迭代次数
+        self._totol_epoch = max(self.totol_epoch, num_epochs)  # 计算总迭代次数
+        # 根据迭代次数产生日志
+        self.parent.logger.debug(f'total training epochs {self.totol_epoch}')
+        if num_epoch:
+            self.parent.logger.debug(f'trained {num_epoch} epochs')
+        else:
+            self.parent.logger.warning(f'num_epochs is {num_epochs}, less than totol training epoch {self.totol_epoch}, the model won\'t be trained.')
+        return num_epoch
+
+    @property
+    def totol_epoch(self):
+        '''返回总迭代次数'''
+        return self._totol_epoch
+
+    def save(self, path, label='epoch'):
+        '''保存数据'''
+        DataSaveToJson.save_data(path, label, self.totol_epoch)
+
+    def load(self, path, label='epoch'):
+        '''加载数据'''
+        self._totol_epoch = DataSaveToJson.load_data(path, label)
+
+
 # MachineLearning 机器学习
-# 机器学习是类，用于训练模型
+# 这是机器学习的工具类
 # 机器学习的返回值是机器学习对象
-# 机器学习的参数是模型、训练集、验证集、测试集、设备
 class MachineLearning:
     '''机器学习'''
 
-    class AutoSaveLoader:
-        '''自动保存加载器'''
-
-        def __init__(self):
-            '''
-            初始化函数
-            '''
-            self.save_func = []  # 保存函数
-            self.load_func = []  # 加载函数
-
-        def add_save_func(self, func):
-            '''添加保存函数'''
-            self.save_func.append(func)
-
-        def save(self, dir_path):
-            '''保存数据'''
-            for func in self.save_func:
-                func(dir_path)
-
-        def add_load_func(self, func):
-            '''添加加载函数'''
-            self.load_func.append(func)
-
-        def load(self, dir_path):
-            '''加载数据'''
-            for func in self.load_func:
-                func(dir_path)
-
-    def __init__(self, file_name, **kwargs):
+    def __init__(self, file_name):
         '''
         初始化函数
 
-        kwargs: 其他参数，自定义参数自动转化为属性
+        file_name: 文件名
         '''
         # 定义时间字符串和文件名
         time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -386,7 +426,7 @@ class MachineLearning:
         Path(self.dir_path).mkdir(parents=True, exist_ok=True)
 
         # 设置日志
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger('mylog')
         self.logger.setLevel(logging.DEBUG)
         # 定义日志格式
         formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s")
@@ -401,12 +441,25 @@ class MachineLearning:
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
 
-        # 设置其他参数
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
         # 创建自动保存加载器
-        self.data_manager = MachineLearning.AutoSaveLoader()
+        self.data_manager = AutoSaveLoader()
+
+    def batch_create(self, create_epoch_num=1, create_timer_num=1, create_recorder_num=1):
+        '''
+        批量创建
+
+        create_epoch_num: 创建Epoch的数量
+
+        create_timer_num: 创建计时器的数量
+
+        create_recorder_num: 创建记录器的数量
+
+        返回顺序为: Epoch, Timer, Recorder
+        '''
+        epochs = (self.create_epoch() for _ in range(create_epoch_num))
+        timers = (self.create_timer() for _ in range(create_timer_num))
+        recorders = (self.create_recorder(3) for _ in range(create_recorder_num))
+        return *epochs, *timers, *recorders
 
     def save(self, dir_name=None):
         '''保存数据'''
@@ -418,14 +471,26 @@ class MachineLearning:
         dir_path = f'../results/{dir_name}' if dir_name else self.dir_path
         self.data_manager.load(dir_path)
 
+    def create_epoch(self, label='num_epochs'):
+        '''创建Epoch参数'''
+        epoch = Epoch(self)
+
+        def save(dir_path):
+            epoch.save(f'{dir_path}/{self.file_name}.json', label)
+            self.logger.debug(f'save Epoch({label}) to {dir_path}/{self.file_name}.json')
+        self.data_manager.add_save_func(save)
+
+        def load(dir_path):
+            epoch.load(f'{dir_path}/{self.file_name}.json', label)
+            self.logger.debug(f'load Epoch({label}) from {dir_path}/{self.file_name}.json')
+        self.data_manager.add_load_func(load)
+
+        self.logger.debug(f'create Epoch({label})')
+        return epoch
+
     def create_timer(self, label='timer'):
         '''创建计时器'''
-        if hasattr(self, label):
-            self.logger.warning(f'{label} already exists')
-            return
-        else:
-            timer = Timer()
-            setattr(self, label, timer)
+        timer = Timer()
 
         def save(dir_path):
             timer.save(f'{dir_path}/{self.file_name}.json', label)
@@ -438,15 +503,11 @@ class MachineLearning:
         self.data_manager.add_load_func(load)
 
         self.logger.debug(f'create Timer({label})')
+        return timer
 
     def create_recorder(self, recorder_num, label='recorder'):
         '''创建记录器'''
-        if hasattr(self, label):
-            self.logger.warning(f'{label} already exists')
-            return
-        else:
-            recorder = Recorder(recorder_num)
-            setattr(self, label, recorder)
+        recorder = Recorder(recorder_num)
 
         def save(dir_path):
             recorder.save(f'{dir_path}/{self.file_name}.json', label)
@@ -459,15 +520,11 @@ class MachineLearning:
         self.data_manager.add_load_func(load)
 
         self.logger.debug(f'create Recorder({label})')
+        return recorder
 
     def create_animator(self, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None, fmts=None, label='animator'):
         '''创建动画器'''
-        if hasattr(self, label):
-            self.logger.warning(f'{label} already exists')
-            return
-        else:
-            animator = Animator(xlabel, ylabel, xlim, ylim, legend, fmts)
-            setattr(self, label, animator)
+        animator = Animator(xlabel, ylabel, xlim, ylim, legend, fmts)
 
         def save(dir_path):
             animator.save(f'{dir_path}/{self.file_name}.png')
@@ -475,6 +532,7 @@ class MachineLearning:
         self.data_manager.add_save_func(save)
 
         self.logger.debug(f'create Animator({label})')
+        return animator
 
     def add_model(self, model, label='model'):
         '''添加模型保存'''
@@ -490,87 +548,3 @@ class MachineLearning:
 
         self.logger.debug(f'add model({label})')
         self.logger.debug(f'model({label}) is {model}')
-
-
-class SupervisedLearning(MachineLearning):
-    '''机器学习'''
-
-    def __init__(self, file_name, recorder_num=3, legend=['train loss', 'val loss', 'val acc'], **kwargs):
-        '''
-        初始化函数
-
-        file_name: 文件名
-
-        recorder_num: 记录器数量, 默认为空
-
-        legend: 动画标签, 默认为空
-
-        kwargs: 其他参数，自定义参数自动转化为属性
-        '''
-        MachineLearning.__init__(self, file_name, **kwargs)
-
-        self.legend = legend  # 定义动画标签
-
-        self.num_epochs = 0  # 定义总迭代次数
-
-        self.create_timer()  # 创建计时器
-        self.create_recorder(recorder_num)  # 创建记录器
-
-    def trainer(self, func):
-        '''
-        训练装饰器
-
-        args: 训练函数的参数
-
-        num_epochs: 迭代次数
-
-        kwargs: 其他参数
-        '''
-
-        def wrapper(*args, num_epochs, **kwargs):
-            num_epoch = num_epochs - self.num_epochs if num_epochs > self.num_epochs else 0  # 计算迭代次数
-            self.num_epochs = max(self.num_epochs, num_epochs)  # 计算总迭代次数
-
-            self.create_animator(xlabel='epoch', xlim=[0, self.num_epochs + 1], ylim=-0.1, legend=self.legend)  # 创建动画器
-            self.animator.show(self.recorder.data)  # 显示动画
-
-            # 根据迭代次数产生日志
-            if num_epoch:
-                self.logger.debug(f'trained {num_epoch} epochs')
-            else:
-                self.logger.warning(f'num_epochs is {num_epochs}, but it is less than {self.num_epochs}, so it will not be trained')
-
-            # 开始训练
-            func(*args, num_epoch, **kwargs)
-
-            self.logger.debug(f'total training epochs {self.num_epochs}')
-            if self.timer.sum():
-                self.logger.debug(f'total training time {time.strftime("%H:%M:%S", time.gmtime(self.timer.sum()))}')
-
-            self.save()
-
-        return wrapper
-
-    def save(self):
-        '''
-        保存模型
-        '''
-        # 保存总迭代次数
-        DataSaveToJson.save_data(f'{self.dir_path}/{self.file_name}.json', 'num_epochs', self.num_epochs)
-        self.logger.debug(f'save num_epochs to {self.dir_path}/{self.file_name}.json')
-
-        MachineLearning.save(self)
-
-    def load(self, dir_name=None):
-        '''
-        加载模型
-
-        dir_name: 模型保存文件名, 默认为最新文件名
-        '''
-        dir_path = f'../results/{dir_name}' if dir_name else self.dir_path
-
-        # 加载总迭代次数
-        self.num_epochs = DataSaveToJson.load_data(f'{dir_path}/{self.file_name}.json', 'num_epochs')
-        self.logger.debug(f'load num_epochs from {dir_path}/{self.file_name}.json')
-
-        MachineLearning.load(self, dir_name)
