@@ -1,3 +1,11 @@
+"""
+mltools.py
+
+此模块提供了一系列机器学习相关的工具函数和类，
+涵盖数据处理、模型训练辅助、数据保存与加载等功能，
+旨在简化机器学习项目的开发流程。
+"""
+
 import torch
 from torch.utils import data
 from torchvision import transforms, datasets
@@ -15,13 +23,21 @@ from collections import Counter
 from matplotlib import pyplot as plt
 
 
-# 数据保存器
-# 继承数据保存器类可以获得保存和加载数据到json文件的功能
 class DataSaveToJson:
-    '''json数据保存器'''
+    """
+    json数据保存器，提供将数据保存到 JSON 文件和从 JSON 文件加载数据的功能。
+    """
 
+    @staticmethod
     def save_data(path, label, datas):
-        '''保存数据'''
+        """
+        保存数据到指定路径的 JSON 文件中。
+
+        Args:
+            path (str): JSON 文件的保存路径。
+            label (str): 数据在 JSON 文件中的键名。
+            datas: 要保存的数据。
+        """
         try:
             with open(path, 'r') as file:
                 data = json.load(file)
@@ -31,27 +47,36 @@ class DataSaveToJson:
             data[label] = datas
             json.dump(data, f, indent=4)
 
+    @staticmethod
     def load_data(path, label):
-        '''从json文件导入'''
+        """
+        从指定路径的 JSON 文件中加载数据。
+
+        Args:
+            path (str): JSON 文件的路径。
+            label (str): 数据在 JSON 文件中的键名。
+
+        Returns:
+            从 JSON 文件中加载的数据。
+        """
         with open(path, 'r') as file:
             return json.load(file)[label]
 
 
-# 分词器
-# 分词器是一个字典，键是词元，值是索引
-# 分词器的长度是词典的大小
-# 分词器的索引是词元的索引
 class Tokenizer:
-    '''分词器'''
+    """
+    分词器，将文本数据转换为词元索引，支持词元与索引之间的相互转换，
+    并提供保存和加载词表的功能。
+    """
 
     def __init__(self, datas, min_freq=0):
-        '''
-        初始化
+        """
+        初始化分词器。
 
-        datas: list[str] 数据集
-
-        min_freq: int 最小词频, 默认值0
-        '''
+        Args:
+            datas (list[str]): 数据集，包含文本数据。
+            min_freq (int, optional): 最小词频，低于该频率的词元将被过滤。默认值为 0。
+        """
         tokens = Counter()  # 将文本拆分为词元并统计频率
         for item in datas:
             tokens.update(str(item))
@@ -67,14 +92,40 @@ class Tokenizer:
         self.token_to_idx.update(tokens_dict)
 
     def __call__(self, tokens, max_length=None):
+        """
+        调用分词器，将词元转换为索引。
+
+        Args:
+            tokens: 输入的词元，可以是字符串、列表或元组。
+            max_length (int, optional): 最大长度，用于填充或截断。默认值为 None。
+
+        Returns:
+            torch.Tensor: 转换后的词元索引。
+        """
         return self.encode(tokens, max_length)
 
     def __len__(self):
-        '''返回词表大小'''
+        """
+        返回词表大小。
+
+        Returns:
+            int: 词表的长度。
+        """
         return len(self.idx_to_token)
 
     def decode(self, indices):
-        '''根据索引返回词元'''
+        """
+        根据索引返回词元。
+
+        Args:
+            indices (torch.Tensor): 输入的词元索引。
+
+        Returns:
+            str 或 list[str]: 解码后的词元。
+
+        Raises:
+            TypeError: 如果输入的 indices 不是 torch.Tensor 类型。
+        """
         if isinstance(indices, torch.Tensor):
             if indices.dim() == 0:
                 return []
@@ -86,7 +137,19 @@ class Tokenizer:
             raise TypeError('indices must be torch.Tensor')
 
     def encode(self, texts, max_length=None):
-        '''根据词元返回索引'''
+        """
+        根据词元返回索引。
+
+        Args:
+            texts (str 或 list[str] 或 tuple[str]): 输入的词元。
+            max_length (int, optional): 最大长度，用于填充或截断。默认值为 None。
+
+        Returns:
+            torch.Tensor: 转换后的词元索引。
+
+        Raises:
+            TypeError: 如果输入的 texts 不是 str、list[str] 或 tuple[str] 类型。
+        """
         if isinstance(texts, str):
             if max_length:
                 texts = list(texts)[:max_length] if len(texts) > max_length else list(texts) + ['[PAD]'] * (max_length - len(texts))
@@ -99,33 +162,74 @@ class Tokenizer:
             raise TypeError(f'texts: {texts}\nThe type of texts is {type(texts)}, while texts must be of type str, tuple[str] or list[str]')
 
     def save(self, path, label='tokenizer'):
-        '''保存数据'''
+        """
+        保存分词器的词表到 JSON 文件。
+
+        Args:
+            path (str): JSON 文件的保存路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'tokenizer'。
+        """
         DataSaveToJson.save_data(path, label, [self.idx_to_token, self.token_to_idx])
 
     def load(self, path, label='tokenizer'):
-        '''加载数据'''
+        """
+        从 JSON 文件中加载分词器的词表。
+
+        Args:
+            path (str): JSON 文件的路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'tokenizer'。
+        """
         self.idx_to_token, self.token_to_idx = DataSaveToJson.load_data(path, label)
 
 
-# 自定义数据集
 class MyDataset(data.Dataset):
+    """
+    自定义数据集类，继承自 torch.utils.data.Dataset。
+    """
+
     def __init__(self, datas):
+        """
+        初始化数据集。
+
+        Args:
+            datas: 数据集数据。
+        """
         data.Dataset.__init__(self)
         self.data = datas
 
     def __len__(self):
+        """
+        返回数据集的长度。
+
+        Returns:
+            int: 数据集的长度。
+        """
         return len(self.data)
 
     def __getitem__(self, idx):
+        """
+        根据索引获取数据集中的元素。
+
+        Args:
+            idx (int): 数据索引。
+
+        Returns:
+            数据集中对应索引的元素。
+        """
         return self.data[idx]
 
 
-# load_data 多个数据集加载器
-# 数据集加载器是函数，用于加载数据集
-# 数据集加载器的返回值是训练集、验证集、测试集的迭代器
-# 数据集加载器的参数是数据集的路径、批量大小、是否下载数据集
 def split_data(datas, ratio):
-    '''将数据按比例随机分割'''
+    """
+    将数据按比例随机分割。
+
+    Args:
+        datas: 待分割的数据。
+        ratio (list[float]): 分割比例。
+
+    Returns:
+        list: 分割后的数据列表。
+    """
     ratio = [r / sum(ratio) for r in ratio]
     nums = [int(len(datas) * r) for r in ratio]
     nums[-1] = len(datas) - sum(nums[:-1])
@@ -133,12 +237,31 @@ def split_data(datas, ratio):
 
 
 def iter_data(datas, batch_size, shuffle=True):
-    '''将批量数据转换为迭代器'''
+    """
+    将批量数据转换为迭代器。
+
+    Args:
+        datas (list): 数据集列表。
+        batch_size (int): 批量大小。
+        shuffle (bool, optional): 是否打乱数据。默认值为 True。
+
+    Returns:
+        generator: 数据迭代器生成器。
+    """
     return (data.DataLoader(_data, batch_size=batch_size, shuffle=shuffle) for _data in datas)
 
 
 def download_file(url, save_path):
-    '''文件下载'''
+    """
+    从指定 URL 下载文件。
+
+    Args:
+        url (str): 文件的下载 URL。
+        save_path (str): 文件的保存路径。
+
+    Returns:
+        str: 下载文件的文件名。
+    """
     file_name = re.search(r'(?<=/)[^/]+$', url).group()  # 从url中提取文件名
     if not Path(f'{save_path}/{file_name}').exists():  # 如果文件不存在则下载
         Path(save_path).mkdir(parents=True, exist_ok=True)  # 创建保存路径
@@ -154,17 +277,16 @@ def download_file(url, save_path):
 
 
 def mnist(path='../data', batch_size=100):
-    '''
-    加载数据集MNIST
+    """
+    加载数据集 MNIST。
 
-    path: 数据集路径, 默认值'../data'
+    Args:
+        path (str, optional): 数据集路径。默认值为 '../data'。
+        batch_size (int, optional): 批量大小。默认值为 100。
 
-    batch_size: 批量大小, 默认值100
-
-    download: 是否下载数据集, 默认值False
-
-    返回训练集、验证集、测试集迭代器
-    '''
+    Returns:
+        tuple: 训练集、验证集、测试集的迭代器。
+    """
     download = False if Path(f'{path}/MNIST').exists() else True
     trans = transforms.ToTensor()  # 数据集格式转换
     train_data = datasets.MNIST(root=path, train=True, transform=trans, download=download)
@@ -174,15 +296,16 @@ def mnist(path='../data', batch_size=100):
 
 
 def chn_senti_corp(path='../data', batch_size=100):
-    '''
-    加载数据集ChnSentiCorp
+    """
+    加载数据集 ChnSentiCorp。
 
-    path: 数据集路径, 默认值'../data'
+    Args:
+        path (str, optional): 数据集路径。默认值为 '../data'。
+        batch_size (int, optional): 批量大小。默认值为 100。
 
-    batch_size: 批量大小, 默认值100
-
-    返回词表和训练集、验证集、测试集迭代器
-    '''
+    Returns:
+        tuple: 训练集、验证集、测试集的迭代器和分词器。
+    """
     url = 'https://raw.githubusercontent.com/SophonPlus/ChineseNlpCorpus/refs/heads/master/datasets/ChnSentiCorp_htl_all/ChnSentiCorp_htl_all.csv'
     file_name = download_file(url, path)
     chn_senti_corp = pd.read_csv(f'{path}/{file_name}')  # 读数据集
@@ -194,14 +317,23 @@ def chn_senti_corp(path='../data', batch_size=100):
     return train_iter, val_iter, test_iter, tokenizer  # 返回迭代器和分词器
 
 
-# Animator 动画器
-# 动画器是类，用于绘制动画
-# 动画器的返回值是动画对象
-# 动画器的参数是x轴标签、y轴标签、x轴数据、y轴数据、x轴范围、y轴范围、图例
 class Animator:
-    """在动画中绘制数据"""
+    """
+    在动画中绘制数据，用于动态展示训练过程中的指标变化。
+    """
 
     def __init__(self, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None, fmts=None):
+        """
+        初始化动画器。
+
+        Args:
+            xlabel (str, optional): x 轴标签。默认值为 None。
+            ylabel (str, optional): y 轴标签。默认值为 None。
+            xlim (tuple, optional): x 轴范围。默认值为 None。
+            ylim (tuple, optional): y 轴范围。默认值为 None。
+            legend (list, optional): 图例。默认值为 None。
+            fmts (list, optional): 线条格式。默认值为 None。
+        """
         self.fig, self.axes = plt.subplots()  # 生成画布
         self.set_axes = lambda: self.axes.set(xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim)  # 初始化设置axes函数
         self.legend = legend  # 图例
@@ -209,7 +341,12 @@ class Animator:
         plt.close()
 
     def show(self, Y):
-        '''展示动画'''
+        """
+        展示动画。
+
+        Args:
+            Y (list): y 轴数据列表。
+        """
         X = [list(range(1, len(sublist) + 1)) for sublist in Y]
         self.axes.cla()  # 清除画布
         for x, y, fmt in zip(X, Y, self.fmts):
@@ -222,12 +359,24 @@ class Animator:
         display.clear_output(wait=True)  # 清除输出
 
     def save(self, path):
-        '''保存动画'''
+        """
+        保存动画为图片文件。
+
+        Args:
+            path (str): 图片文件的保存路径。
+        """
         self.fig.savefig(path)
 
 
 def images(images, labels, shape):
-    '''展示图片'''
+    """
+    展示图片。
+
+    Args:
+        images (torch.Tensor): 图片数据。
+        labels (list): 图片标签。
+        shape (tuple): 子图布局形状。
+    """
     images = images.to(device='cpu')
     fig, axes = plt.subplots(*shape)
     axes = [element for sublist in axes for element in sublist]
@@ -237,150 +386,265 @@ def images(images, labels, shape):
         ax.imshow(img, cmap='gray')
 
 
-# Accumulator 累加器
-# 累加器是类，用于累加多个变量
-# 累加器的返回值是累加器对象
-# 累加器的参数是变量个数
 class Accumulator:
-    '''在n个变量上累加'''
+    """
+    在 n 个变量上累加，用于统计训练过程中的指标。
+    """
 
     def __init__(self, n):
-        '''初始化'''
+        """
+        初始化累加器。
+
+        Args:
+            n (int): 变量个数。
+        """
         self.data = [0.0] * n
 
     def add(self, *args):
-        '''添加'''
+        """
+        添加数据到累加器。
+
+        Args:
+            *args: 要添加的数据。
+        """
         self.data = [a + float(b) for a, b in zip(self.data, args)]
 
     def reset(self):
-        '''重置'''
+        """
+        重置累加器的数据。
+        """
         self.data = [0.0] * len(self.data)
 
     def __getitem__(self, idx):
-        '''返回第n个累加值'''
+        """
+        返回第 n 个累加值。
+
+        Args:
+            idx (int): 索引。
+
+        Returns:
+            float: 第 idx 个累加值。
+        """
         return self.data[idx]
 
 
-# Recorder 记录器
-# 记录器是类，用于记录多个变量
-# 记录器的返回值是记录器对象
-# 记录器的参数是变量个数
 class Recorder:
-    '''n个记录器'''
+    """
+    n 个记录器，用于记录训练过程中的多个变量的值，支持保存和加载。
+    """
 
     def __init__(self, n):
-        '''初始化'''
+        """
+        初始化记录器。
+
+        Args:
+            n (int): 记录器的数量。
+        """
         self.data = [[] for _ in range(n)]
 
     def get_latest_record(self):
-        '''返回最新记录'''
+        """
+        返回最新记录。
+
+        Returns:
+            generator: 最新记录的生成器。
+        """
         return (item[-1] for item in self.data)
 
     def max_record_size(self):
-        '''返回最长记录长度'''
+        """
+        返回最长记录长度。
+
+        Returns:
+            int: 最长记录的长度。
+        """
         return max((len(item) for item in self.data))
 
     def reset(self):
-        '''重置'''
+        """
+        重置记录器的数据。
+        """
         self.data = [[] for _ in range(len(self.data))]
 
     def __getitem__(self, idx):
-        '''返回第n个记录器'''
+        """
+        返回第 n 个记录器的数据。
+
+        Args:
+            idx (int): 索引。
+
+        Returns:
+            list: 第 idx 个记录器的数据列表。
+        """
         return self.data[idx]
 
     def save(self, path, label='recorder'):
-        '''保存数据'''
+        """
+        保存记录器的数据到 JSON 文件。
+
+        Args:
+            path (str): JSON 文件的保存路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'recorder'。
+        """
         DataSaveToJson.save_data(path, label, self.data)
 
     def load(self, path, label='recorder'):
-        '''加载数据'''
+        """
+        从 JSON 文件中加载记录器的数据。
+
+        Args:
+            path (str): JSON 文件的路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'recorder'。
+        """
         self.data = DataSaveToJson.load_data(path, label)
 
 
-# Timer 计时器
-# 计时器是类，用于记录多个变量
-# 计时器的返回值是计时器对象
-# 计时器的参数是变量个数
 class Timer:
-    '''记录多次运行时间'''
+    """
+    记录多次运行时间，支持保存和加载记录的时间数据。
+    """
 
     def __init__(self):
-        '''初始化'''
+        """
+        初始化计时器。
+        """
         self.times = []
 
     def start(self):
-        '''启动计时器'''
+        """
+        启动计时器。
+        """
         self.tik = time.time()
 
     def stop(self):
-        '''停止计时器并将时间记录在列表中'''
+        """
+        停止计时器并将时间记录在列表中。
+
+        Returns:
+            float: 本次记录的时间。
+        """
         self.times.append(time.time() - self.tik)
         return self.times[-1]
 
     def avg(self):
-        '''返回平均时间'''
+        """
+        返回平均时间。
+
+        Returns:
+            str: 平均时间的格式化字符串。
+        """
         if self.times:
             return time.strftime("%H:%M:%S", time.gmtime(sum(self.times) / len(self.times)))
         else:
             return time.strftime("%H:%M:%S", time.gmtime(0))
 
     def sum(self):
-        '''返回时间总和'''
+        """
+        返回时间总和。
+
+        Returns:
+            str: 时间总和的格式化字符串。
+        """
         return time.strftime("%H:%M:%S", time.gmtime(sum(self.times)))
 
     def save(self, path, label='timer'):
-        '''保存数据'''
+        """
+        保存计时器的时间数据到 JSON 文件。
+
+        Args:
+            path (str): JSON 文件的保存路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'timer'。
+        """
         DataSaveToJson.save_data(path, label, self.times)
 
     def load(self, path, label='timer'):
-        '''加载数据'''
+        """
+        从 JSON 文件中加载计时器的时间数据。
+
+        Args:
+            path (str): JSON 文件的路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'timer'。
+        """
         self.times = DataSaveToJson.load_data(path, label)
 
 
-# 自动保存加载器
-# 将部分数据的保存和加载整合到一起
 class AutoSaveLoader:
-    '''自动保存加载器'''
+    """
+    自动保存加载器，将多个数据的保存和加载功能整合在一起，
+    支持添加自定义的保存和加载函数。
+    """
 
     def __init__(self):
-        '''
-        初始化函数
-        '''
+        """
+        初始化函数，创建保存和加载函数列表。
+        """
         self.save_func = []  # 保存函数
         self.load_func = []  # 加载函数
 
     def add_save_func(self, func):
-        '''添加保存函数'''
+        """
+        添加保存函数。
+
+        Args:
+            func (callable): 保存函数。
+        """
         self.save_func.append(func)
 
     def save(self, dir_path):
-        '''保存数据'''
+        """
+        保存数据。
+
+        Args:
+            dir_path (str): 数据保存的目录路径。
+        """
         for func in self.save_func:
             func(dir_path)
 
     def add_load_func(self, func):
-        '''添加加载函数'''
+        """
+        添加加载函数。
+
+        Args:
+            func (callable): 加载函数。
+        """
         self.load_func.append(func)
 
     def load(self, dir_path):
-        '''加载数据'''
+        """
+        加载数据。
+
+        Args:
+            dir_path (str): 数据加载的目录路径。
+        """
         for func in self.load_func:
             func(dir_path)
 
 
-# 机器学习Epoch
-# 便于计算、控制训练轮数
-# 便于数据保存和加载
 class Epoch:
-    '''机器学习Epoch'''
+    """
+    机器学习 Epoch，用于管理训练轮数，支持保存和加载总训练轮数。
+    """
 
     def __init__(self, parent):
-        '''初始化'''
+        """
+        初始化。
+
+        Args:
+            parent: 父对象，用于访问日志记录器。
+        """
         self._totol_epoch = 0
         self.parent = parent
 
     def __call__(self, num_epochs):
-        '''返回迭代轮数'''
+        """
+        返回迭代轮数。
+
+        Args:
+            num_epochs (int): 期望的训练轮数。
+
+        Returns:
+            int: 本次需要训练的轮数。
+        """
         num_epoch = num_epochs - self.totol_epoch if num_epochs > self.totol_epoch else 0  # 计算迭代次数
         self._totol_epoch = max(self.totol_epoch, num_epochs)  # 计算总迭代次数
         # 根据迭代次数产生日志
@@ -393,30 +657,47 @@ class Epoch:
 
     @property
     def totol_epoch(self):
-        '''返回总迭代次数'''
+        """
+        返回总迭代次数。
+
+        Returns:
+            int: 总训练轮数。
+        """
         return self._totol_epoch
 
     def save(self, path, label='epoch'):
-        '''保存数据'''
+        """
+        保存总训练轮数到 JSON 文件。
+
+        Args:
+            path (str): JSON 文件的保存路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'epoch'。
+        """
         DataSaveToJson.save_data(path, label, self.totol_epoch)
 
     def load(self, path, label='epoch'):
-        '''加载数据'''
+        """
+        从 JSON 文件中加载总训练轮数。
+
+        Args:
+            path (str): JSON 文件的路径。
+            label (str, optional): 数据在 JSON 文件中的键名。默认值为 'epoch'。
+        """
         self._totol_epoch = DataSaveToJson.load_data(path, label)
 
 
-# MachineLearning 机器学习
-# 这是机器学习的工具类
-# 机器学习的返回值是机器学习对象
 class MachineLearning:
-    '''机器学习'''
+    """
+    机器学习工具类，提供批量创建训练辅助对象、管理模型和数据的保存与加载等功能。
+    """
 
     def __init__(self, file_name):
-        '''
-        初始化函数
+        """
+        初始化函数。
 
-        file_name: 文件名
-        '''
+        Args:
+            file_name (str): 文件名。
+        """
         # 定义时间字符串和文件名
         time_str = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.dir_path = f'../results/{time_str}-{file_name}'
@@ -445,38 +726,52 @@ class MachineLearning:
         self.data_manager = AutoSaveLoader()
 
     def batch_create(self, create_epoch_num=1, create_timer_num=1, create_recorder_num=1):
-        '''
-        批量创建
+        """
+        批量创建 Epoch、Timer 和 Recorder 对象。
 
-        create_epoch_num: 创建Epoch的数量
+        Args:
+            create_epoch_num (int, optional): 创建 Epoch 的数量。默认值为 1。
+            create_timer_num (int, optional): 创建计时器的数量。默认值为 1。
+            create_recorder_num (int, optional): 创建记录器的数量。默认值为 1。
 
-        create_timer_num: 创建计时器的数量
-
-        create_recorder_num: 创建记录器的数量
-
-        返回顺序为: Epoch, Timer, Recorder
-        '''
+        Returns:
+            tuple: Epoch、Timer 和 Recorder 对象的元组。
+        """
         epochs = (self.create_epoch() for _ in range(create_epoch_num))
         timers = (self.create_timer() for _ in range(create_timer_num))
         recorders = (self.create_recorder(3) for _ in range(create_recorder_num))
         return *epochs, *timers, *recorders
 
     def save(self, dir_name=None):
-        '''保存数据'''
+        """
+        保存数据。
+
+        Args:
+            dir_name (str, optional): 数据保存的目录名。默认值为 None。
+        """
         dir_path = f'../results/{dir_name}' if dir_name else self.dir_path
         self.data_manager.save(dir_path)
 
     def load(self, dir_name=None):
-        '''加载数据'''
+        """
+        加载数据。
+
+        Args:
+            dir_name (str, optional): 数据加载的目录名。默认值为 None。
+        """
         dir_path = f'../results/{dir_name}' if dir_name else self.dir_path
         self.data_manager.load(dir_path)
 
     def create_epoch(self, label='num_epochs'):
-        '''
-        创建Epoch参数
-        
-        label: Epoch的标签, 建议和被赋值变量名相同
-        '''
+        """
+        创建 Epoch 参数。
+
+        Args:
+            label (str, optional): Epoch 的标签，建议和被赋值变量名相同。默认值为 'num_epochs'。
+
+        Returns:
+            Epoch: 创建的 Epoch 对象。
+        """
         epoch = Epoch(self)
 
         def save(dir_path):
@@ -493,11 +788,15 @@ class MachineLearning:
         return epoch
 
     def create_timer(self, label='timer'):
-        '''
-        创建计时器
-        
-        label: 计时器的标签, 建议和被赋值变量名相同
-        '''
+        """
+        创建计时器。
+
+        Args:
+            label (str, optional): 计时器的标签，建议和被赋值变量名相同。默认值为 'timer'。
+
+        Returns:
+            Timer: 创建的计时器对象。
+        """
         timer = Timer()
 
         def save(dir_path):
@@ -514,13 +813,16 @@ class MachineLearning:
         return timer
 
     def create_recorder(self, recorder_num, label='recorder'):
-        '''
-        创建记录器
-        
-        recorder_num: 记录器的数量
-        
-        label: 记录器的标签, 建议和被赋值变量名相同
-        '''
+        """
+        创建记录器。
+
+        Args:
+            recorder_num (int): 记录器的数量。
+            label (str, optional): 记录器的标签，建议和被赋值变量名相同。默认值为 'recorder'。
+
+        Returns:
+            Recorder: 创建的记录器对象。
+        """
         recorder = Recorder(recorder_num)
 
         def save(dir_path):
@@ -537,23 +839,21 @@ class MachineLearning:
         return recorder
 
     def create_animator(self, xlabel=None, ylabel=None, xlim=None, ylim=None, legend=None, fmts=None, label='animator'):
-        '''
-        创建动画器
-        
-        xlabel: x轴标签
-        
-        ylabel: y轴标签
-        
-        xlim: x轴范围
-        
-        ylim: y轴范围
-        
-        legend: 图例
-        
-        fmts: 格式
-        
-        label: 动画器的标签, 建议和被赋值变量名相同
-        '''
+        """
+        创建动画器。
+
+        Args:
+            xlabel (str, optional): x 轴标签。默认值为 None。
+            ylabel (str, optional): y 轴标签。默认值为 None。
+            xlim (tuple, optional): x 轴范围。默认值为 None。
+            ylim (tuple, optional): y 轴范围。默认值为 None。
+            legend (list, optional): 图例。默认值为 None。
+            fmts (list, optional): 格式。默认值为 None。
+            label (str, optional): 动画器的标签，建议和被赋值变量名相同。默认值为 'animator'。
+
+        Returns:
+            Animator: 创建的动画器对象。
+        """
         animator = Animator(xlabel, ylabel, xlim, ylim, legend, fmts)
 
         def save(dir_path):
@@ -565,13 +865,13 @@ class MachineLearning:
         return animator
 
     def add_model(self, model, label='model'):
-        '''
-        添加模型
-        
-        model: 模型
-        
-        label: 模型的标签, 建议和模型变量名相同
-        '''
+        """
+        添加模型。
+
+        Args:
+            model: 模型。
+            label (str, optional): 模型的标签，建议和模型变量名相同。默认值为 'model'。
+        """
         def save(dir_path):
             torch.save(model.state_dict(), f'{dir_path}/{self.file_name}.pth')
             self.logger.debug(f'save model({label}) to {dir_path}/{self.file_name}.pth')
