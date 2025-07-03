@@ -531,21 +531,34 @@ class Timer:
         返回平均时间。
 
         Returns:
-            str: 平均时间的格式化字符串。
+            float: 平均时间，单位为秒。如果没有记录时间，则返回 0。
         """
         if self.times:
-            return time.strftime("%H:%M:%S", time.gmtime(sum(self.times) / len(self.times)))
+            return sum(self.times) / len(self.times)
         else:
-            return time.strftime("%H:%M:%S", time.gmtime(0))
+            return 0
 
     def sum(self):
         """
-        返回时间总和。
+        计算记录的所有时间的总和。
 
         Returns:
-            str: 时间总和的格式化字符串。
+            float: 记录的所有时间的总和，单位为秒。如果没有记录时间，则返回 0。
         """
-        return time.strftime("%H:%M:%S", time.gmtime(sum(self.times)))
+        return sum(self.times)
+
+    @staticmethod
+    def str(times):
+        """
+        将时间转换为格式化的字符串。
+
+        Args:
+            times (float): 时间，单位为秒。
+
+        Returns:
+            str: 格式化后的时间字符串，格式为 "HH:MM:SS"。
+        """
+        return time.strftime("%H:%M:%S", time.gmtime(times))
 
     def save(self, path, label='timer'):
         """
@@ -884,3 +897,24 @@ class MachineLearning:
 
         self.logger.debug(f'add model({label})')
         self.logger.debug(f'model({label}) is {model}')
+
+    def print_training_time_massage(self, timer, num_epochs, current_epoch):
+        """
+        打印模型训练时间相关信息，包括已训练时长、平均训练时长和预估剩余训练时长。
+
+        Args:
+            timer (Timer): 计时器对象，用于获取训练时间数据。
+            num_epochs (int): 总训练轮数。
+            current_epoch (int): 当前训练到的轮数。
+
+        Returns:
+            None: 此函数仅打印信息，不返回任何值。
+        """
+        # 计算已训练的总时长，并转换为 HH:MM:SS 格式
+        trained_duration = Timer.str(timer.sum())
+        # 计算每轮的平均训练时长，并转换为 HH:MM:SS 格式
+        average_duration = Timer.str(timer.avg())
+        # 计算预估的剩余训练时长，并转换为 HH:MM:SS 格式
+        estimated_duration = Timer.str((num_epochs - current_epoch) * timer.avg())
+        # 打印训练时间相关信息
+        self.logger.info(f'Trained duration: {trained_duration}, Average training duration: {average_duration}, Estimated training duration:{estimated_duration}')
