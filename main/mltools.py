@@ -7,6 +7,7 @@ mltools.py
 """
 
 import torch
+from torch import nn
 from torch.utils import data
 from torchvision import transforms, datasets
 import re
@@ -885,6 +886,9 @@ class MachineLearning:
             model: 模型。
             label (str, optional): 模型的标签，建议和模型变量名相同。默认值为 'model'。
         """
+        if not isinstance(model, nn.Module):
+            raise RuntimeError(f'model({label}) must be a nn.Module')
+
         def save(dir_path):
             torch.save(model.state_dict(), f'{dir_path}/{self.file_name}.pth')
             self.logger.debug(f'save model({label}) to {dir_path}/{self.file_name}.pth')
@@ -918,3 +922,20 @@ class MachineLearning:
         estimated_duration = Timer.str((num_epochs - current_epoch) * timer.avg())
         # 打印训练时间相关信息
         self.logger.info(f'Trained duration: {trained_duration}, Average training duration: {average_duration}, Estimated training duration:{estimated_duration}')
+
+    def model_params(self, model, label='model'):
+        """
+        打印模型参数数量。
+
+        Args:
+            model: 模型对象。
+
+        Returns:
+            None: 此函数仅打印信息，不返回任何值。
+        """
+        if not isinstance(model, nn.Module):
+            raise RuntimeError(f'model({label}) must be a nn.Module')
+        # 统计模型参数数量
+        num_params = sum([param.numel() for param in model.parameters()])
+        # 打印模型参数数量
+        self.logger.info(f'Number of model({label}) parameters: {num_params}')
