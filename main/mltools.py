@@ -938,4 +938,4 @@ class MachineLearning:
         # 统计模型参数数量
         num_params = sum([param.numel() for param in model.parameters()])
         # 打印模型参数数量
-        self.logger.info(f'Number of model({label}) parameters: {num_params}')
+        self.logger.info(f'Number of model({label}) parameters: {num_params / (1024 * 1024):.2f}M')
