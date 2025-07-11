@@ -739,22 +739,22 @@ class MachineLearning:
         # 创建自动保存加载器
         self.data_manager = AutoSaveLoader()
 
-    def batch_create(self, create_epoch_num=1, create_timer_num=1, create_recorder_num=1):
+    def batch_create(self, create_epoch_num=True, create_timer_num=True, create_recorder_num=True):
         """
         批量创建 Epoch、Timer 和 Recorder 对象。
 
         Args:
-            create_epoch_num (int, optional): 创建 Epoch 的数量。默认值为 1。
-            create_timer_num (int, optional): 创建计时器的数量。默认值为 1。
-            create_recorder_num (int, optional): 创建记录器的数量。默认值为 1。
+            create_epoch_num (bool, optional): 是否创建 Epoch 对象。默认值为 True。
+            create_timer_num (bool, optional): 是否创建计时器对象。默认值为 True。
+            create_recorder_num (bool, optional): 是否创建记录器对象。默认值为 True。
 
         Returns:
-            tuple: Epoch、Timer 和 Recorder 对象的元组。
+            tuple: 包含创建的 Epoch、Timer 和 Recorder 对象的元组，不包含 None 值。
         """
-        epochs = (self.create_epoch() for _ in range(create_epoch_num))
-        timers = (self.create_timer() for _ in range(create_timer_num))
-        recorders = (self.create_recorder(3) for _ in range(create_recorder_num))
-        return *epochs, *timers, *recorders
+        epoch = self.create_epoch() if create_epoch_num else None
+        timer = self.create_timer() if create_timer_num else None
+        recorder = self.create_recorder(3) if create_recorder_num else None
+        return (item for item in (epoch, timer, recorder) if item is not None)
 
     def save(self, dir_name=None):
         """
