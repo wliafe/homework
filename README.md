@@ -13,8 +13,8 @@ homework
 ├── data
 │   ├── mnist.npz
 │   └── sentiment.csv
-├── main
-│   ├── mltools.py
+├── src
+│   ├── dataloader.py
 │   └── <file_name>.ipynb
 ├── results
 │   ├── <time_str>-<file_name>
@@ -31,14 +31,14 @@ homework
 └── README.md
 ```
 
-其中，`main` 目录下存放的是各个实验的代码，`results` 目录下存放的是各个实验的结果，`data` 目录下存放的是数据集。
+其中，`src` 目录下存放的是各个实验的代码，`results` 目录下存放的是各个实验的结果，`data` 目录下存放的是数据集。
 
 ## 环境配置
 
 使用uv安装依赖项。
 
 ```bash
-uv sync --extra cu124
+uv sync
 ```
 
 ## 使用说明
